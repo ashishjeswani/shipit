@@ -36,7 +36,8 @@ export function useDashboard(): {
       : null,
     approver: hasRole(user, "APPROVER")
       ? {
-          pendingReviews: reviewable.filter((request) => request.status === "PENDING_REVIEW").length,
+          pendingReviews: reviewable.filter((request) => request.status === "PENDING_REVIEW")
+            .length,
           assignedToMe: reviewable.filter((request) => request.assignedReviewer?.id === user?.id)
             .length,
         }

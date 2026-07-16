@@ -93,6 +93,8 @@ shipit/
 │   │   ├── users.ts                    # GET /api/users
 │   │   ├── releases.ts                 # BE §3
 │   │   ├── requests.ts                 # BE §4
+│   │   ├── storage.ts                  # live /api/v1/storage upload + download
+│   │   ├── storage-coords.ts           # sessionStorage for Storage uuid after create
 │   │   ├── messages.ts                 # BE §5
 │   │   ├── dashboard.ts                # BE §6
 │   │   └── notifications.ts            # BE §7

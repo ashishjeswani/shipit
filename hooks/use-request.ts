@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useUsers } from "@/hooks/use-users"
 import { enrichRequest } from "@/lib/api/enrich-request"
 import { requestsApi } from "@/lib/api/requests"
+import { readStorageCoords } from "@/lib/api/storage-coords"
 import { keys } from "@/lib/query/keys"
 import type { DeploymentRequestDetail } from "@/lib/types/api"
 
@@ -27,7 +28,24 @@ export function useRequest(id: number): {
   })
 
   const usersById = new Map((usersQuery.data ?? []).map((u) => [u.id, u]))
-  const data = requestQuery.data ? enrichRequest(requestQuery.data, usersById, user) : undefined
+  let data = requestQuery.data ? enrichRequest(requestQuery.data, usersById, user) : undefined
+
+  // Merge Storage coords from create (sessionStorage / cache) onto the file —
+  // live FileSummaryDto doesn't carry uuid, which Storage download needs.
+  if (data?.file) {
+    const coords = readStorageCoords(id)
+    if (coords && !data.file.uuid) {
+      data = {
+        ...data,
+        file: {
+          ...data.file,
+          uuid: coords.uuid,
+          storageUserId: coords.storageUserId,
+          storagePrefix: coords.storagePrefix,
+        },
+      }
+    }
+  }
 
   return {
     data,

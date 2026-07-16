@@ -11,14 +11,15 @@ import { MessageList } from "@/components/requests/message-list"
 import { RequestDetailHeader } from "@/components/requests/request-detail-header"
 import { ReviewActions } from "@/components/requests/review-actions"
 import { ReviewingBanner } from "@/components/requests/reviewing-banner"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { useRequest } from "@/hooks/use-request"
 import { useRequestHistory } from "@/hooks/use-request-history"
 import { useRequestMessages } from "@/hooks/use-request-messages"
+import { useRequestMutations } from "@/hooks/use-request-mutations"
 import { useReviewActions } from "@/hooks/use-review-actions"
-import { canReview } from "@/lib/auth/capabilities"
+import { canOpenRequest, canReview, canSubmitRequest } from "@/lib/auth/capabilities"
 import { ApiClientError } from "@/lib/types/errors"
-import type { ConversationMessage } from "@/lib/types/api"
 
 export default function RequestDetailPage() {
   const { requestId } = useParams<{ requestId: string }>()
@@ -27,13 +28,18 @@ export default function RequestDetailPage() {
   const { user } = useAuth()
   const { data: request, isLoading } = useRequest(id)
   const { data: history } = useRequestHistory(id)
-  const { data: baseMessages } = useRequestMessages(id)
   const { approve, reject, requestChanges } = useReviewActions()
+  const { submit } = useRequestMutations()
 
-  // Messages still mock-send until messages.create is wired; keep local
-  // extras only for the composer path.
-  const [extraMessages, setExtraMessages] = useState<ConversationMessage[]>([])
-  const [decisionError, setDecisionError] = useState<string | null>(null)
+  const canChat = !!user && !!request && canOpenRequest(user, request)
+  const {
+    data: messages,
+    isLoading: messagesLoading,
+    send,
+  } = useRequestMessages(id, { enabled: canChat })
+
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading request…</p>
@@ -45,14 +51,12 @@ export default function RequestDetailPage() {
     return <p className="text-sm text-muted-foreground">Request not found.</p>
   }
 
-  const messages = [...baseMessages, ...extraMessages]
-
   if (request.locked) {
     return <LockedBanner reviewerName={request.assignedReviewer?.name} />
   }
 
   const showReviewActions = canReview(user, request)
-  const currentUser = user
+  const showSubmit = canSubmitRequest(user, request)
   const deciding =
     approve.isPending || reject.isPending || requestChanges.isPending
 
@@ -60,7 +64,7 @@ export default function RequestDetailPage() {
     decision: "APPROVED" | "REJECTED" | "CHANGES_REQUESTED",
     comment: string,
   ) {
-    setDecisionError(null)
+    setActionError(null)
     try {
       if (decision === "APPROVED") {
         await approve.mutateAsync({ id, comment: comment || undefined })
@@ -70,23 +74,32 @@ export default function RequestDetailPage() {
         await requestChanges.mutateAsync({ id, comment })
       }
     } catch (err) {
-      setDecisionError(decisionErrorMessage(err))
+      setActionError(actionErrorMessage(err))
       throw err
     }
   }
 
-  function handleSend(text: string) {
-    setExtraMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        requestId: id,
-        sender: currentUser,
-        text,
-        system: false,
-        createdAt: new Date().toISOString(),
-      },
-    ])
+  async function handleSubmit() {
+    setActionError(null)
+    try {
+      await submit.mutateAsync(id)
+    } catch (err) {
+      setActionError(actionErrorMessage(err))
+    }
+  }
+
+  async function handleSend(text: string) {
+    setSendError(null)
+    try {
+      await send.mutateAsync(text)
+    } catch (err) {
+      setSendError(
+        err instanceof ApiClientError
+          ? err.error.message || "Could not send message."
+          : "Could not send message.",
+      )
+      throw err
+    }
   }
 
   return (
@@ -98,8 +111,6 @@ export default function RequestDetailPage() {
           <ReviewingBanner reviewerName={request.reviewingBy.name} />
         )}
 
-        {/* description/file aren't returned by the live BE's
-            DeploymentRequestReadDto yet (lib/types/api.ts) — shown only when present. */}
         {request.description ? (
           <p className="text-sm whitespace-pre-wrap">{request.description}</p>
         ) : (
@@ -108,12 +119,27 @@ export default function RequestDetailPage() {
           </p>
         )}
 
-        {request.file && <FileDownloadButton file={request.file} />}
+        {request.file && <FileDownloadButton file={request.file} requestId={request.id} />}
+
+        {showSubmit && (
+          <div className="flex flex-col gap-2">
+            <Button className="w-fit" disabled={submit.isPending} onClick={handleSubmit}>
+              {submit.isPending
+                ? "Submitting…"
+                : request.status === "CHANGES_REQUESTED"
+                  ? "Resubmit for approval"
+                  : "Submit for approval"}
+            </Button>
+            {actionError && !showReviewActions && (
+              <p className="text-sm text-destructive">{actionError}</p>
+            )}
+          </div>
+        )}
 
         {showReviewActions && (
           <div className="flex flex-col gap-2">
             <ReviewActions onDecide={handleDecide} pending={deciding} />
-            {decisionError && <p className="text-sm text-destructive">{decisionError}</p>}
+            {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           </div>
         )}
 
@@ -126,24 +152,33 @@ export default function RequestDetailPage() {
       <div className="flex h-[32rem] flex-col gap-3 rounded-2xl border p-4 lg:h-auto">
         <h2 className="font-heading text-sm font-medium text-muted-foreground">Conversation</h2>
         <div className="min-h-0 flex-1">
-          <MessageList messages={messages} currentUserId={user.id} />
+          {messagesLoading ? (
+            <p className="text-sm text-muted-foreground">Loading messages…</p>
+          ) : (
+            <MessageList messages={messages} currentUserId={user.id} />
+          )}
         </div>
-        <MessageComposer onSend={handleSend} />
+        <div className="flex flex-col gap-2">
+          <MessageComposer onSend={handleSend} pending={send.isPending} />
+          {sendError && <p className="text-sm text-destructive">{sendError}</p>}
+        </div>
       </div>
     </div>
   )
 }
 
-function decisionErrorMessage(err: unknown): string {
-  if (!(err instanceof ApiClientError)) return "Could not record that decision."
+function actionErrorMessage(err: unknown): string {
+  if (!(err instanceof ApiClientError)) return "Could not complete that action."
   switch (err.error.code) {
     case "REQUEST_ALREADY_DECIDED":
       return "Someone else just decided on this request."
     case "REQUEST_NOT_REVIEWABLE":
       return "This request's status changed — refresh and try again."
+    case "RELEASE_NOT_OPEN":
+      return "This release is no longer open for submissions."
     case "NOT_RELEASE_APPROVER":
       return "You don't have permission for this."
     default:
-      return err.error.message || "Could not record that decision."
+      return err.error.message || "Could not complete that action."
   }
 }

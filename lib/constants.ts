@@ -4,10 +4,9 @@ export type Role = (typeof ROLES)[number]
 export const RELEASE_STATUSES = ["OPEN", "READY_FOR_DEPLOYMENT", "CLOSED"] as const
 export type ReleaseStatus = (typeof RELEASE_STATUSES)[number]
 
-// PENDING_REVIEW (not PENDING_APPROVAL) confirmed against the live backend's
-// seed data on 2026-07-16 — the deployed requestStatus enum has drifted from
-// docs/BACKEND_API_GUIDE.md; the terminal statuses are unconfirmed best guesses
-// since no lifecycle endpoint exists yet to produce them.
+// Live BE/swagger uses PENDING_APPROVAL; older payloads used PENDING_REVIEW.
+// Both are reviewable — normalize to PENDING_REVIEW in enrich-request so the
+// rest of the UI speaks one vocabulary.
 export const REQUEST_STATUSES = [
   "DRAFT",
   "PENDING_REVIEW",
@@ -17,12 +16,29 @@ export const REQUEST_STATUSES = [
 ] as const
 export type RequestStatus = (typeof REQUEST_STATUSES)[number]
 
+/** Raw BE statuses that mean "awaiting an approver decision". */
+export const REVIEWABLE_RAW_STATUSES = ["PENDING_REVIEW", "PENDING_APPROVAL"] as const
+
 export const FIELD_LIMITS = {
   messageText: { min: 1, max: 2000 },
   releaseName: { min: 1, max: 100 },
   requestTitle: { min: 1, max: 150 },
   requestDescription: { min: 1, max: 5000 },
 } as const
+
+// Live BE + Storage upload validation (BE §0 / swagger Storage).
+export const SCRIPT_EXTENSIONS = ["py", "js", "sh"] as const
+export type ScriptExtension = (typeof SCRIPT_EXTENSIONS)[number]
+export const MAX_SCRIPT_FILE_BYTES = 5 * 1024 * 1024
+
+export const SCRIPT_LANGUAGE_BY_EXT: Record<
+  ScriptExtension,
+  "python" | "javascript" | "shell"
+> = {
+  py: "python",
+  js: "javascript",
+  sh: "shell",
+}
 
 // The live backend requires a bearer token but has no usable login flow for
 // this pass (docs/frontend/07-auth-and-permissions.md's login UI is out of

@@ -12,22 +12,29 @@ export function MessageComposer({
   onSend,
   disabled = false,
   disabledReason,
+  pending = false,
 }: {
-  onSend: (text: string) => void
+  onSend: (text: string) => void | Promise<void>
   // Disabled (not hidden), with a tooltip explaining why, per
   // docs/frontend/08-ui-architecture.md — e.g. the request is locked to
   // another reviewer.
   disabled?: boolean
   disabledReason?: string
+  pending?: boolean
 }) {
   const [text, setText] = useState("")
   const trimmed = text.trim()
   const overLimit = trimmed.length > FIELD_LIMITS.messageText.max
+  const blocked = disabled || pending
 
-  function handleSend() {
-    if (!trimmed || overLimit || disabled) return
-    onSend(trimmed)
-    setText("")
+  async function handleSend() {
+    if (!trimmed || overLimit || blocked) return
+    try {
+      await onSend(trimmed)
+      setText("")
+    } catch {
+      // Parent surfaces the error; keep the draft so the user can retry.
+    }
   }
 
   const composer = (
@@ -38,19 +45,19 @@ export function MessageComposer({
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault()
-            handleSend()
+            void handleSend()
           }
         }}
         placeholder="Write a message…"
         rows={1}
-        disabled={disabled}
+        disabled={blocked}
         aria-invalid={overLimit}
       />
       <Button
         size="icon"
-        onClick={handleSend}
-        disabled={disabled || !trimmed || overLimit}
-        aria-label="Send message"
+        onClick={() => void handleSend()}
+        disabled={blocked || !trimmed || overLimit}
+        aria-label={pending ? "Sending…" : "Send message"}
       >
         <SendIcon />
       </Button>

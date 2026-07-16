@@ -21,7 +21,7 @@ export default function RequestsPage() {
     <div className="flex flex-col gap-8">
       <h1 className="font-heading text-xl font-medium">Requests</h1>
       {isLoading && <p className="text-sm text-muted-foreground">Loading requests…</p>}
-      {hasRole(user, "DEVELOPER") && <DeveloperRequestList requests={myRequests} />}
+      {hasRole(user, "DEVELOPER") && <DeveloperRequestList requests={myRequests} user={user} />}
       {hasRole(user, "APPROVER") && (
         <ApproverRequestList requests={reviewableRequests} user={user} />
       )}

@@ -48,9 +48,15 @@ Multipart requests (`requests.create`, `requests.replaceFile`) use a sibling `re
 - **Banners** (persistent, in-flow): errors that describe the *state of the resource being viewed* — `REQUEST_LOCKED`, `RELEASE_HAS_OPEN_REQUESTS`. These aren't transient; they belong in the layout, not a toast that disappears.
 - **Toasts** (`sonner`, transient): errors/confirmations about an *action just taken* — approve succeeded, decision race lost, generic permission denial. Also used for realtime notifications ([05](05-realtime.md)).
 
-## File download (no auth header on a plain `<a href>`)
+## File download (auth header required)
 
-`GET /api/requests/{id}/file` requires the `Authorization` header, which a bare anchor tag can't send. Pattern for `file-download-button.tsx`:
+Prefer **Storage** when the create flow stamped coords onto the file (`uuid` + `storageUserId` from `POST /api/v1/storage/upload`):
+
+```ts
+const blob = await storageApi.download(file.storageUserId, file.uuid, file.storagePrefix)
+```
+
+Otherwise fall back to `GET /api/requests/{id}/file` (BE §4). Pattern for `file-download-button.tsx`:
 
 ```ts
 async function downloadRequestFile(id: number, filename: string) {
@@ -66,7 +72,7 @@ async function downloadRequestFile(id: number, filename: string) {
 }
 ```
 
-This bypasses `lib/api/client.ts`'s JSON assumption (response is binary) — implemented directly in `requests.downloadFile`, not forced through the generic `request<T>()` helper. Not cached in TanStack Query — it's a one-shot side effect, not state to hold onto.
+Both paths go through `lib/api/client.ts` (`getBlob` / `postForm`) so the `Authorization` header is attached — a bare `<a href>` cannot. Not cached in TanStack Query — it's a one-shot side effect.
 
 ## Client-side validation limits (mirror of BE §0 — keep these two tables in sync)
 

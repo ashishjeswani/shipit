@@ -30,6 +30,7 @@ export function canReview(
 ): boolean {
   if (!user || isOwner(user, request)) return false
   if (!hasRole(user, "APPROVER")) return false
+  // PENDING_APPROVAL is normalized to PENDING_REVIEW in enrich-request.
   if (request.status !== "PENDING_REVIEW") return false
   return canOpenRequest(user, request)
 }
@@ -49,4 +50,12 @@ export function canEditRequest(
   return (
     isOwner(user, request) && (request.status === "DRAFT" || request.status === "CHANGES_REQUESTED")
   )
+}
+
+// Owner may submit a draft (or resubmit after changes) → PENDING_APPROVAL (BE §4).
+export function canSubmitRequest(
+  user: User | null,
+  request: Pick<DeploymentRequestListItem, "owner" | "status">,
+): boolean {
+  return canEditRequest(user, request)
 }

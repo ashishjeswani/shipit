@@ -1,5 +1,5 @@
 import { RequestCard } from "@/components/requests/request-card"
-import { canReview } from "@/lib/auth/capabilities"
+import { canReview, canSubmitRequest } from "@/lib/auth/capabilities"
 import type { DeploymentRequestListItem, User } from "@/lib/types/api"
 
 export function ApproverRequestList({
@@ -21,7 +21,12 @@ export function ApproverRequestList({
           {requests.map((request) => (
             // `mine: true` (dual-role viewing own request) never renders review
             // affordances — canReview's ownership check enforces that, full stop.
-            <RequestCard key={request.id} request={request} canReview={canReview(user, request)} />
+            <RequestCard
+              key={request.id}
+              request={request}
+              canReview={canReview(user, request)}
+              canSubmit={canSubmitRequest(user, request)}
+            />
           ))}
         </div>
       )}

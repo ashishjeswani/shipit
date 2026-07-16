@@ -18,7 +18,7 @@ export const keys = {
   },
   request: (id: number) => ["requests", id] as const,
   requestHistory: (id: number) => ["requests", id, "history"] as const,
-  requestMessages: (id: number) => ["requests", id, "messages"] as const,
+  requestMessages: (id: number) => ["requests", id, "messages"] as const, // live MessageEntity; see lib/api/messages.ts
   notifications: {
     list: () => ["notifications"] as const,
     unreadCount: () => ["notifications", "unread-count"] as const,

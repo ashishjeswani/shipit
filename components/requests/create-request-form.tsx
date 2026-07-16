@@ -5,17 +5,38 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/hooks/use-auth"
 import { useRequestMutations } from "@/hooks/use-request-mutations"
 import { useUsers } from "@/hooks/use-users"
-import { FIELD_LIMITS } from "@/lib/constants"
+import {
+  FIELD_LIMITS,
+  MAX_SCRIPT_FILE_BYTES,
+  SCRIPT_EXTENSIONS,
+} from "@/lib/constants"
+import { ApiClientError } from "@/lib/types/errors"
 import { cn } from "@/lib/utils"
 
-// POST /api/releases/{releaseId}/requests per docs/BACKEND_API_GUIDE.md, but
-// the live DeploymentRequestCreateDto only accepts {title, description} today
-// (no releaseId/assignedReviewerId/file — see lib/api/requests.ts). This form
-// still collects and sends the full intended payload: harmless now (BE drops
-// the extra fields), correct once BE catches up. There's no file upload
-// control since the live DTO has no file field at all yet.
+function scriptExt(name: string): string | null {
+  const dot = name.lastIndexOf(".")
+  if (dot < 0) return null
+  return name.slice(dot + 1).toLowerCase()
+}
+
+function validateScriptFile(file: File | null): string | null {
+  if (!file) return "A script file is required."
+  const ext = scriptExt(file.name)
+  if (!ext || !(SCRIPT_EXTENSIONS as readonly string[]).includes(ext)) {
+    return `File must be .${SCRIPT_EXTENSIONS.join(", .")}.`
+  }
+  if (file.size < 1 || file.size > MAX_SCRIPT_FILE_BYTES) {
+    return "File must be between 1 byte and 5 MB."
+  }
+  return null
+}
+
+// Live create is multipart on POST /api/releases/{releaseId}/requests (file
+// required). Script bytes are also uploaded via Storage
+// (POST /api/v1/storage/upload) so download can use the working Storage GET.
 export function CreateRequestForm({
   releaseId,
   onCreated,
@@ -25,9 +46,12 @@ export function CreateRequestForm({
 }) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [file, setFile] = useState<File | null>(null)
   const [assignedReviewerId, setAssignedReviewerId] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
   const { data: users } = useUsers()
-  const { create } = useRequestMutations()
+  const { createAndSubmit } = useRequestMutations()
 
   const trimmedTitle = title.trim()
   const trimmedDescription = description.trim()
@@ -37,14 +61,30 @@ export function CreateRequestForm({
   const descriptionValid =
     trimmedDescription.length >= FIELD_LIMITS.requestDescription.min &&
     trimmedDescription.length <= FIELD_LIMITS.requestDescription.max
-  const canSubmit = titleValid && descriptionValid && !create.isPending
+  const fileError = validateScriptFile(file)
+  const canSubmit =
+    titleValid && descriptionValid && !fileError && !!user && !createAndSubmit.isPending
 
-  function handleSubmit() {
-    if (!canSubmit) return
-    create.mutate(
-      { title: trimmedTitle, description: trimmedDescription, releaseId, assignedReviewerId },
-      { onSuccess: (dto) => onCreated(dto.id) },
-    )
+  async function handleSubmit() {
+    if (!canSubmit || !file || !user) return
+    setError(null)
+    try {
+      const dto = await createAndSubmit.mutateAsync({
+        title: trimmedTitle,
+        description: trimmedDescription,
+        releaseId,
+        file,
+        userId: user.id,
+        assignedReviewerId,
+      })
+      onCreated(dto.id)
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError
+          ? err.error.message
+          : "Failed to submit request for approval.",
+      )
+    }
   }
 
   return (
@@ -75,6 +115,24 @@ export function CreateRequestForm({
           aria-invalid={description.length > 0 && !descriptionValid}
           placeholder="What does this script do?"
         />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-muted-foreground" htmlFor="request-file">
+          Script file
+        </label>
+        <Input
+          id="request-file"
+          type="file"
+          accept={SCRIPT_EXTENSIONS.map((ext) => `.${ext}`).join(",")}
+          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          aria-invalid={file !== null && !!fileError}
+        />
+        {file && fileError && <p className="text-xs text-destructive">{fileError}</p>}
+        {file && !fileError && (
+          <p className="text-xs text-muted-foreground">
+            {file.name} ({(file.size / 1024).toFixed(1)} KB)
+          </p>
+        )}
       </div>
       {users && users.length > 0 && (
         <div className="flex flex-col gap-1.5">
@@ -112,13 +170,9 @@ export function CreateRequestForm({
           </div>
         </div>
       )}
-      {create.isError && (
-        <p className="text-xs text-destructive">
-          {create.error instanceof Error ? create.error.message : "Failed to create request."}
-        </p>
-      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
       <Button onClick={handleSubmit} disabled={!canSubmit} className="w-fit">
-        {create.isPending ? "Creating…" : "Create request"}
+        {createAndSubmit.isPending ? "Submitting…" : "Submit for approval"}
       </Button>
     </div>
   )

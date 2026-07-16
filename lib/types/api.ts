@@ -71,6 +71,11 @@ export interface RequestFile {
   name: string
   size: number
   language: "python" | "javascript" | "shell"
+  // Attached client-side after POST /api/v1/storage/upload — the live
+  // FileSummaryDto doesn't return these, but Storage download needs them.
+  uuid?: string
+  storageUserId?: string
+  storagePrefix?: string
 }
 
 // Enriched, viewer-scoped projection of DeploymentRequestDto: embedded
@@ -105,6 +110,20 @@ export interface HistoryEntry {
   at: string
   by: UserSummary
   event: string
+}
+
+// Live MessageEntity (/v3/api-docs Conversations) — sender is a bare id;
+// FE enriches to UserSummary in use-request-messages. Guide §5's embedded
+// `sender` is accepted when present so either shape works.
+export interface MessageDto {
+  id: number
+  requestId: number
+  senderId?: number | null
+  sender?: UserSummary | null
+  text: string
+  system: boolean
+  status?: "ACTIVE" | "DELETED"
+  createdAt: string
 }
 
 export interface ConversationMessage {

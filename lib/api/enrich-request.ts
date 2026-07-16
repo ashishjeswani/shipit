@@ -1,10 +1,24 @@
 import { canOpenRequest, isOwner } from "@/lib/auth/capabilities"
+import { REQUEST_STATUSES, REVIEWABLE_RAW_STATUSES, type RequestStatus } from "@/lib/constants"
 import type {
   DeploymentRequestDetail,
   DeploymentRequestDto,
   User,
   UserSummary,
 } from "@/lib/types/api"
+
+function normalizeRequestStatus(raw: string | undefined): RequestStatus {
+  if (!raw) return "DRAFT"
+  // Live submit endpoint writes PENDING_APPROVAL; map to the FE's single
+  // pending vocabulary so canReview / badges / dashboard counts all match.
+  if ((REVIEWABLE_RAW_STATUSES as readonly string[]).includes(raw)) {
+    return "PENDING_REVIEW"
+  }
+  if ((REQUEST_STATUSES as readonly string[]).includes(raw)) {
+    return raw as RequestStatus
+  }
+  return "DRAFT"
+}
 
 function unknownUser(id: number): UserSummary {
   return { id, name: `User #${id}` }
@@ -51,7 +65,7 @@ export function enrichRequest(
     id: dto.id,
     releaseId: dto.releaseId,
     title: dto.title,
-    status: dto.status ?? dto.requestStatus ?? "DRAFT",
+    status: normalizeRequestStatus(dto.status ?? dto.requestStatus),
     owner,
     assignedReviewer,
     reviewingBy: dto.reviewingBy ?? null,

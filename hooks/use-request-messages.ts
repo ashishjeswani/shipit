@@ -1,10 +1,85 @@
-import { MOCK_MESSAGES } from "@/lib/mock/messages"
-import type { ConversationMessage } from "@/lib/types/api"
+"use client"
 
-export function useRequestMessages(id: number): {
+import { useEffect } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+
+import { useUsers } from "@/hooks/use-users"
+import { messagesApi } from "@/lib/api/messages"
+import { keys } from "@/lib/query/keys"
+import type { ConversationMessage, MessageDto, UserSummary } from "@/lib/types/api"
+
+function enrichMessage(
+  dto: MessageDto,
+  usersById: Map<number, UserSummary>,
+): ConversationMessage | null {
+  if (dto.status === "DELETED") return null
+
+  const sender: UserSummary | null = dto.system
+    ? null
+    : (dto.sender ??
+      (dto.senderId != null
+        ? (usersById.get(dto.senderId) ?? { id: dto.senderId, name: `User ${dto.senderId}` })
+        : null))
+
+  return {
+    id: dto.id,
+    requestId: dto.requestId,
+    sender,
+    text: dto.text,
+    system: dto.system,
+    createdAt: dto.createdAt,
+  }
+}
+
+// GET/POST /api/requests/{id}/messages + mark-read (BE §5). Enabled only when
+// the viewer is allowed to open the request — a locked-to-someone-else 403
+// would otherwise clear the session via apiClient.
+export function useRequestMessages(
+  id: number,
+  options: { enabled?: boolean } = {},
+): {
   data: ConversationMessage[]
-  isLoading: false
-  error: null
+  isLoading: boolean
+  error: Error | null
+  send: ReturnType<typeof useMutation<MessageDto, Error, string>>
 } {
-  return { data: MOCK_MESSAGES[id] ?? [], isLoading: false, error: null }
+  const { enabled = true } = options
+  const queryClient = useQueryClient()
+  const usersQuery = useUsers()
+
+  const messagesQuery = useQuery({
+    queryKey: keys.requestMessages(id),
+    queryFn: () => messagesApi.list(id),
+    enabled: enabled && Number.isFinite(id) && id > 0,
+    retry: false,
+  })
+
+  // Mark the thread read whenever the list fetch lands (including refetch after
+  // send) so list unreadMessages badges clear (BE §5).
+  useEffect(() => {
+    if (!enabled || !messagesQuery.isSuccess || !messagesQuery.dataUpdatedAt) return
+    void messagesApi.markRead(id).then(() => {
+      queryClient.invalidateQueries({ queryKey: keys.requests.list() })
+    })
+  }, [enabled, id, messagesQuery.isSuccess, messagesQuery.dataUpdatedAt, queryClient])
+
+  const usersById = new Map((usersQuery.data ?? []).map((u) => [u.id, u]))
+  const data = (messagesQuery.data ?? [])
+    .map((dto) => enrichMessage(dto, usersById))
+    .filter((m): m is ConversationMessage => m != null)
+
+  const send = useMutation({
+    mutationFn: (text: string) => messagesApi.create(id, text),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.requestMessages(id) })
+      queryClient.invalidateQueries({ queryKey: keys.requests.list() })
+    },
+  })
+
+  return {
+    data,
+    isLoading: enabled && (messagesQuery.isLoading || usersQuery.isLoading),
+    error: messagesQuery.error ?? usersQuery.error,
+    send,
+  }
 }

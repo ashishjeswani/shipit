@@ -10,7 +10,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { useRelease } from "@/hooks/use-release"
 import { useRequests } from "@/hooks/use-requests"
-import { canCreateRequest, canReview, hasRole } from "@/lib/auth/capabilities"
+import { canCreateRequest, canReview, canSubmitRequest, hasRole } from "@/lib/auth/capabilities"
 
 export default function ReleaseDetailPage() {
   const { releaseId } = useParams<{ releaseId: string }>()
@@ -60,7 +60,12 @@ export default function ReleaseDetailPage() {
           <p className="text-sm text-muted-foreground">No requests in this release yet.</p>
         )}
         {scopedRequests.map((request) => (
-          <RequestCard key={request.id} request={request} canReview={canReview(user, request)} />
+          <RequestCard
+            key={request.id}
+            request={request}
+            canReview={canReview(user, request)}
+            canSubmit={canSubmitRequest(user, request)}
+          />
         ))}
       </div>
     </div>

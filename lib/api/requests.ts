@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/api/client"
-import type { DeploymentRequestDto } from "@/lib/types/api"
+import { storageApi } from "@/lib/api/storage"
+import type { DeploymentRequestDto, RequestFile } from "@/lib/types/api"
 
 interface Page<T> {
   content: T[]
@@ -9,15 +10,28 @@ export interface CreateRequestInput {
   title: string
   description: string
   releaseId: number
+  file: File
+  /** Current user id — required by live POST /api/v1/storage/upload. */
+  userId: number
   assignedReviewerId?: number | null
 }
 
-// The live DeploymentRequestCreateDto only accepts {title, description} today
-// (docs/BACKEND_API_GUIDE.md's releaseId/assignedReviewerId/file fields aren't
-// on the deployed DTO yet, confirmed by smoke-testing the swagger on
-// 2026-07-16 — the BE silently drops them). They're still sent here since the
-// BE ignores unknown JSON fields rather than rejecting them, so this call
-// becomes fully correct with zero FE changes once BE adds the fields.
+const STORAGE_PREFIX = "scripts"
+
+function withStorageCoords(
+  dto: DeploymentRequestDto,
+  upload: { uuid: string; userId: string },
+): DeploymentRequestDto {
+  if (!dto.file) return dto
+  const file: RequestFile = {
+    ...dto.file,
+    uuid: upload.uuid,
+    storageUserId: upload.userId,
+    storagePrefix: STORAGE_PREFIX,
+  }
+  return { ...dto, file }
+}
+
 export const requestsApi = {
   // No `releaseId` filter exists on GET /api/deployment-requests (also
   // confirmed by smoke test — the param is silently ignored), so callers
@@ -33,12 +47,25 @@ export const requestsApi = {
     return apiClient.get<DeploymentRequestDto>(`/api/deployment-requests/${id}`)
   },
 
-  async create(input: CreateRequestInput): Promise<DeploymentRequestDto> {
-    return apiClient.post<DeploymentRequestDto>("/api/deployment-requests", input)
+  // Live create-with-file: POST /api/releases/{releaseId}/requests (multipart).
+  // Generic POST /api/deployment-requests ignores title/description/file.
+  async create(input: Omit<CreateRequestInput, "userId"> & { status?: string }) {
+    const form = new FormData()
+    form.append("title", input.title)
+    form.append("description", input.description)
+    form.append("file", input.file)
+    if (input.assignedReviewerId != null) {
+      form.append("assignedReviewerId", String(input.assignedReviewerId))
+    }
+    if (input.status) form.append("status", input.status)
+    return apiClient.postForm<DeploymentRequestDto>(
+      `/api/releases/${input.releaseId}/requests`,
+      form,
+    )
   },
 
-  // DeploymentRequestUpdateDto only has `title` today — no way to edit
-  // description or replace the file via this endpoint yet.
+  // DeploymentRequestUpdateDto only has title/description/assignedReviewerId
+  // today — no way to replace the file via this endpoint.
   async updateTitle(id: number, title: string): Promise<DeploymentRequestDto> {
     return apiClient.put<DeploymentRequestDto>(`/api/deployment-requests/${id}`, { title })
   },
@@ -68,5 +95,33 @@ export const requestsApi = {
     return apiClient.post<DeploymentRequestDto>(`/api/requests/${id}/request-changes`, {
       comment,
     })
+  },
+
+  // DRAFT or CHANGES_REQUESTED → PENDING_APPROVAL (BE §4 / live swagger).
+  async submit(id: number): Promise<DeploymentRequestDto> {
+    return apiClient.post<DeploymentRequestDto>(`/api/requests/${id}/submit`)
+  },
+
+  // File bytes live on Storage (swagger "Storage" tag). The request-scoped
+  // GET /api/requests/{id}/file currently 500s (S3 key missing), so create
+  // uploads to Storage first, then creates the request via multipart with
+  // status=PENDING_APPROVAL in one shot (live create accepts that status).
+  async createAndSubmit(input: CreateRequestInput): Promise<DeploymentRequestDto> {
+    const uploaded = await storageApi.upload(input.userId, input.file, STORAGE_PREFIX)
+    const created = await requestsApi.create({
+      ...input,
+      status: "PENDING_APPROVAL",
+    })
+    return withStorageCoords(created, uploaded)
+  },
+
+  async downloadFile(id: number): Promise<Blob> {
+    return apiClient.getBlob(`/api/requests/${id}/file`)
+  },
+
+  async replaceFile(id: number, file: File): Promise<void> {
+    const form = new FormData()
+    form.append("file", file)
+    await apiClient.putForm<void>(`/api/requests/${id}/file`, form)
   },
 }

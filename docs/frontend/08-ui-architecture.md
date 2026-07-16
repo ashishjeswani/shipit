@@ -44,7 +44,7 @@ No nested request routes under a release (`/releases/[id]/requests/[reqId]`) —
   - `reviewingBy` (from `realtime-store`, falling back to the field on the list response) → small "{name} is reviewing" label, doesn't disable anything (BE §8: does not lock).
   - `unreadMessages > 0` → badge.
   - `mine: true` (dual-role viewing own request in an approver-flavored list) → no review affordances rendered at all.
-  - `canReview` → in-place **Approve** button (comment dialog → `POST /api/requests/{id}/approve`) plus an "Open details" link; the card is not a full-surface link in this state so the button isn't nested in an `<a>`.
+  - `canReview` → in-place **Approve / Reject / Request changes** (`review-actions.tsx` → lifecycle POSTs) plus an "Open details" link; the card is not a full-surface link in this state so the buttons aren't nested in an `<a>`.
 - **Realtime:** subscribes `topics.releaseRequests(releaseId)` while mounted — `REQUEST_SUBMITTED`, `REQUEST_REVIEW_STARTED/STOPPED` update the list in place.
 
 ### `/releases/[releaseId]/requests/new`
@@ -52,7 +52,7 @@ No nested request routes under a release (`/releases/[id]/requests/[reqId]`) —
 - **Data:** `useReleaseMutations` isn't needed here — only `useRequestMutations().create`; `useUsers("APPROVER")` for the reviewer picker.
 - **Guard:** redirect back to the release page if `!canCreateRequest` (wrong role or release not `OPEN` — BE `409 RELEASE_NOT_OPEN`).
 - **Components:** `create-request-form.tsx` — react-hook-form + zod mirroring BE §0 limits (title 1–150, description 1–5000, file ext `py`/`js`/`sh` ≤ 5MB) so the user sees validation before the multipart round-trip fails.
-- **Submit behavior:** two buttons — "Save as draft" (`status: DRAFT`) and "Submit for approval" (`status: PENDING_APPROVAL`) map to the same `POST` with a different `status` field (BE §4 create).
+- **Submit behavior:** primary CTA is **"Submit for approval"** — uploads the script via live Storage (`POST /api/v1/storage/upload`), then creates the request as `PENDING_APPROVAL` in one multipart call to `POST /api/releases/{releaseId}/requests` (live create accepts `status`). Existing drafts / changes-requested requests get a **Submit for approval** / **Resubmit for approval** button on the card and detail page (`canSubmitRequest`).
 
 ### `/requests/[requestId]`
 The busiest screen — the whole review workflow lives here.

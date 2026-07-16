@@ -7,7 +7,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RequestCard } from "@/components/requests/request-card"
 import { ReleaseStatusBadge } from "@/components/releases/release-status-badge"
-import { canReview } from "@/lib/auth/capabilities"
+import { canReview, canSubmitRequest } from "@/lib/auth/capabilities"
 import type { ReleaseStatus } from "@/lib/constants"
 import type { ReleaseWithRequests } from "@/hooks/use-releases"
 import type { User } from "@/lib/types/api"
@@ -77,6 +77,7 @@ export function ReleaseAccordionList({
                           key={request.id}
                           request={request}
                           canReview={canReview(user, request)}
+                          canSubmit={canSubmitRequest(user, request)}
                         />
                       ))}
                     </div>
