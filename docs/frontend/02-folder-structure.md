@@ -35,6 +35,8 @@ shipit/
 │   ├── releases/
 │   │   ├── release-card.tsx
 │   │   ├── release-list.tsx
+│   │   ├── release-accordion-list.tsx  # dashboard's Releases section: accordion of all releases
+│   │   ├── release-accordion-item.tsx  # one release; expands to its requests via use-requests
 │   │   ├── release-status-badge.tsx
 │   │   ├── release-status-menu.tsx     # OPEN/READY_FOR_DEPLOYMENT/CLOSED transitions
 │   │   ├── create-release-dialog.tsx
@@ -53,6 +55,10 @@ shipit/
 │   │       ├── review-actions.tsx      # approve / reject / request-changes
 │   │       ├── reviewing-banner.tsx    # "Carol Approver is reviewing"
 │   │       └── locked-banner.tsx       # 403 REQUEST_LOCKED friendly message
+│   ├── dashboard/
+│   │   ├── stat-tile.tsx
+│   │   ├── developer-section.tsx        # status-count tiles + "My requests" shortcut
+│   │   └── approver-section.tsx         # pendingReviews / assignedToMe tiles
 │   ├── conversation/
 │   │   ├── message-list.tsx
 │   │   ├── message-item.tsx

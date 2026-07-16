@@ -25,7 +25,7 @@ No nested request routes under a release (`/releases/[id]/requests/[reqId]`) —
 ### `/dashboard`
 - **Purpose:** the landing page — role-aware summary + entry points into releases/requests.
 - **Data:** `useDashboard()` → `GET /api/dashboard` (BE §6).
-- **Components:** stacked sections — `developer` block (status-count tiles + "My requests" shortcut) and/or `approver` block (`pendingReviews`, `assignedToMe` tiles), plus a compact `release-list.tsx` (reuse from `/releases`).
+- **Components:** stacked sections — `developer` block (status-count tiles + "My requests" shortcut) and/or `approver` block (`pendingReviews`, `assignedToMe` tiles), plus a `release-accordion-list.tsx`: every release, each expandable via `use-requests(releaseId)` to the requests visible to the caller in it — own requests only for a DEVELOPER-only caller, all requests (tagged `mine`) for anyone holding APPROVER.
 - **Role visibility:** render whichever of `developer`/`approver` is non-null; dual-role sees both, stacked (see [07](07-auth-and-permissions.md) dual-role UX).
 - **Realtime:** invalidated by `RELEASE_CREATED`, `REQUEST_SUBMITTED`, any decision event (see [05](05-realtime.md) table) — counts update live without a manual refresh.
 
