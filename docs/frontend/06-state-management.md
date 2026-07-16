@@ -58,7 +58,7 @@ interface RealtimeState {
   bumpLastSeen: (id: number) => void
 }
 ```
-`reviewingBy` is the one place ephemeral WS data is trusted directly (see [05](05-realtime.md)) — everything else the WS layer touches goes through Query invalidation instead.
+`reviewingBy` is the one place ephemeral realtime data is trusted directly (see [05](05-realtime.md)) — written from Pusher `review-status-changed` (or STOMP `REQUEST_REVIEW_*` if that path is enabled). Everything else the realtime layer touches goes through Query invalidation instead.
 
 ## Why not put everything in Query (e.g. via `setQueryData` from WS)
 

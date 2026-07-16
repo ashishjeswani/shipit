@@ -5,7 +5,10 @@ import { useEffect } from "react"
 import { auth } from "@/lib/api/auth"
 import { normalizeRoles } from "@/lib/auth/normalize-roles"
 import { clearStoredToken, getStoredToken, setStoredToken } from "@/lib/auth/token"
+import { unregisterFcmDeviceToken } from "@/lib/firebase/config"
+import { disconnectPusher } from "@/lib/realtime/pusher-client"
 import { useAuthStore } from "@/stores/auth-store"
+import { useRealtimeStore } from "@/stores/realtime-store"
 import type { User } from "@/lib/types/api"
 
 // Module-level so concurrent useAuth() callers (header, layout, etc.) share
@@ -55,7 +58,11 @@ export function useAuth() {
     return normalized
   }
 
-  function logout() {
+  async function logout() {
+    // Unregister while the JWT cookie still exists so the BE can authorize DELETE.
+    await unregisterFcmDeviceToken()
+    disconnectPusher()
+    useRealtimeStore.setState({ reviewingBy: {}, connectionStatus: "closed" })
     clearStoredToken()
     clear()
     bootstrapPromise = null

@@ -45,15 +45,23 @@ export function MessageList({
     return <p className="text-sm text-muted-foreground">No messages yet — say hello.</p>
   }
 
+  const lastId = messages[messages.length - 1]?.id
+
   return (
-    <MessageScrollerProvider>
+    <MessageScrollerProvider autoScroll defaultScrollPosition="end">
       <MessageScroller className="h-full">
         <MessageScrollerViewport>
           <MessageScrollerContent>
             {messages.map((message) => {
+              const isLast = message.id === lastId
+
               if (message.system) {
                 return (
-                  <MessageScrollerItem key={message.id} messageId={String(message.id)}>
+                  <MessageScrollerItem
+                    key={message.id}
+                    messageId={String(message.id)}
+                    scrollAnchor={isLast}
+                  >
                     <p className="text-center text-xs text-muted-foreground">{message.text}</p>
                   </MessageScrollerItem>
                 )
@@ -63,7 +71,11 @@ export function MessageList({
               const align = isMine ? "end" : "start"
 
               return (
-                <MessageScrollerItem key={message.id} messageId={String(message.id)}>
+                <MessageScrollerItem
+                  key={message.id}
+                  messageId={String(message.id)}
+                  scrollAnchor={isLast}
+                >
                   <Message align={align}>
                     <MessageAvatar>
                       <Avatar size="sm">

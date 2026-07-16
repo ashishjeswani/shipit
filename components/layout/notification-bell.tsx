@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
+import { useFcmNotifications } from "@/hooks/use-fcm-notifications"
 import { useNotificationMutations } from "@/hooks/use-notification-mutations"
 import { useNotifications } from "@/hooks/use-notifications"
 import { useNotificationsRealtime } from "@/hooks/use-notifications-realtime"
@@ -20,9 +21,10 @@ import { cn } from "@/lib/utils"
 export function NotificationBell({ userId }: { userId: number }) {
   const { data, unreadCount, isLoading } = useNotifications()
   const { markRead, markAllRead } = useNotificationMutations()
-  // Live push currently has no BE counterpart (see lib/realtime/pusher-client.ts)
-  // — this only ever matters once that side exists; REST above works standalone.
+  // Pusher private-user channel (live bell) + FCM (foreground + background push).
+  // REST above remains the source of truth for list/unread-count.
   useNotificationsRealtime(userId)
+  useFcmNotifications(true)
 
   return (
     <Popover>

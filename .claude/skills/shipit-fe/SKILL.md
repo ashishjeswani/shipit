@@ -34,7 +34,7 @@ This repo builds the frontend for a deployment-approval portal. The backend cont
 - **No self-review, ever** — `canReview` must check ownership before role, full stop. If you ever see review buttons rendered on a user's own request, that's a bug to fix immediately, not a UX case to design around.
 - **WS is a cache-invalidation hint, REST is the source of truth** (BE §8 rule 2) — a WS event handler almost always ends in `queryClient.invalidateQueries(...)`, not a direct cache write. The one sanctioned exception is the ephemeral `reviewingBy` map in `realtime-store` ([06](../../../docs/frontend/06-state-management.md)).
 - **No optimistic status transitions** on releases/requests — decisions are atomic/first-write-wins server-side; always wait for the REST response.
-- **Bonus scope (BE §10 — FCM push, in-browser file editor + versions, containerized execution) is out of scope** unless a human explicitly asks to pick it up. Don't drift into it opportunistically.
+- **Bonus scope (BE §10 — in-browser file editor + versions, containerized execution) is out of scope** unless a human explicitly asks to pick it up. Don't drift into it opportunistically. **FCM + Pusher presence are in scope** when requested — see [05-realtime.md](../../../docs/frontend/05-realtime.md).
 
 ## Workflow for adding a feature
 

@@ -81,12 +81,17 @@ shipit/
 │   ├── use-review-heartbeat.ts         # re-POST review/start every 2 min while screen open
 │   ├── use-request-messages.ts
 │   ├── use-notifications.ts
-│   └── use-realtime.ts                 # subscribes topics for current screen, wires cache invalidation
+│   ├── use-notifications-realtime.ts   # Pusher private-user channel → invalidate bell queries
+│   ├── use-fcm-notifications.ts        # FCM token register + foreground onMessage
+│   ├── use-request-presence.ts         # Pusher presence-request-* + reviewing heartbeat
+│   └── use-realtime.ts                 # (STOMP alternate — not built this pass)
 │
 ├── lib/
 │   ├── utils.ts                        # existing cn() helper
-│   ├── constants.ts                    # enums mirrored from BE §1 (statuses), file limits from BE §0
+│   ├── constants.ts                    # enums, file limits, Pusher/Firebase public config
 │   ├── format-date.ts
+│   ├── firebase/
+│   │   └── config.ts                   # Firebase app + FCM getToken / register / unregister
 │   ├── api/
 │   │   ├── client.ts                   # fetch wrapper: base URL, auth header, JSON/multipart, error mapping
 │   │   ├── auth.ts                     # login, me
@@ -99,9 +104,10 @@ shipit/
 │   │   ├── dashboard.ts                # BE §6
 │   │   └── notifications.ts            # BE §7
 │   ├── realtime/
-│   │   ├── stomp-client.ts             # singleton STOMP client over SockJS, connect/disconnect/reconnect
-│   │   ├── topics.ts                   # destination string builders (BE §8 table)
-│   │   └── types.ts                    # WsEnvelope<T>, event name union
+│   │   ├── pusher-client.ts            # shared Pusher singleton + channel name helpers
+│   │   ├── stomp-client.ts             # (STOMP alternate — not built this pass)
+│   │   ├── topics.ts
+│   │   └── types.ts
 │   ├── auth/
 │   │   ├── token.ts                    # get/set/clear the shipit_token cookie
 │   │   └── capabilities.ts             # hasRole, isOwner, canOpenRequest, canReview — mirrors BE §9

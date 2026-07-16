@@ -65,7 +65,7 @@ Live `MessageEntity` returns `senderId` (not an embedded `sender`); `useRequestM
 |---|---|---|---|
 | `GET /api/dashboard` | `dashboard.get()` | `useDashboard()` | `dashboard/page.tsx` |
 
-## Notifications (BE §7)
+## Notifications (BE §7 + FCM/Pusher presence guide)
 
 | Endpoint | `lib/api` fn | Hook | Consumers |
 |---|---|---|---|
@@ -73,10 +73,17 @@ Live `MessageEntity` returns `senderId` (not an embedded `sender`); `useRequestM
 | `GET /api/notifications/unread-count` | `notifications.unreadCount()` | `useNotifications()` | `notification-bell.tsx` badge |
 | `PATCH /api/notifications/{id}/read` | `notifications.markRead(id)` | `useNotificationMutations().markRead` | `notification-bell.tsx` item click |
 | `POST /api/notifications/read-all` | `notifications.markAllRead()` | `useNotificationMutations().markAllRead` | `notification-bell.tsx` header action |
+| `POST /api/notifications/device-tokens` `{ deviceToken, deviceType: "WEB" }` | `notifications.registerDeviceToken(token)` | `useFcmNotifications` via `registerFcmDeviceToken` | `notification-bell.tsx` (on auth) |
+| `DELETE /api/notifications/device-tokens?token=` | `notifications.deleteDeviceToken(token)` | `useAuth().logout` | logout cleanup |
+| `POST /api/notifications/presence/reviewing?requestId=&isReviewing=` | `notifications.setReviewingPresence(id, bool)` | `useReviewPresenceHeartbeat` | request detail (eligible approver) |
+| `POST /api/notifications/pusher/auth` | called by `pusher-js` (not wrapped) | `getPusherClient()` | private + presence channel subscribe |
 
-**Deviation, explicitly requested:** live push for the bell is wired via `pusher-js` (`lib/realtime/pusher-client.ts`, `use-notifications-realtime.ts`) instead of the STOMP personal queue described in [05](05-realtime.md). The BE has no matching Pusher integration (no `/pusher/auth` endpoint, nothing publishes events to Pusher), so subscription/auth will fail and `new-notification` never fires — the REST calls above are unaffected and the bell is fully functional on polling/refetch alone. Swap this for `topics.personalNotifications()` once STOMP (build-plan phase 7) lands, or add a BE-side Pusher bridge — whichever the team decides.
+**Live push transports (explicitly requested):**
+- **FCM** — `lib/firebase/config.ts` + `public/firebase-messaging-sw.js` + `hooks/use-fcm-notifications.ts`. Foreground `onMessage` invalidates notification Query keys (REST remains source of truth); background uses the service worker.
+- **Pusher** — singleton `lib/realtime/pusher-client.ts`. Bell: `private-user-{userId}` / `new-notification`. Presence: `presence-request-{requestId}` / `review-status-changed` → `realtime-store.reviewingBy` (the one sanctioned ephemeral write; see [05](05-realtime.md), [06](06-state-management.md)).
 
 ## Not called from FE (BE-internal or out of scope)
 
 - `GET /api/health`, `POST /api/dev/reset` — ops-only, not surfaced in the UI.
-- Everything in BE §10 (FCM, execution, file versions) — explicitly out of scope per [00-overview.md](00-overview.md).
+- BE §10 containerized execution / in-browser file versions — still out of scope. FCM device push is **in scope** via the `/api/notifications/device-tokens` endpoints above (not the older §10a `/api/devices/*` paths).
+- STOMP/SockJS personal queue (`/user/queue/notifications`) — deferred; Pusher + FCM cover live delivery for this pass.

@@ -17,9 +17,14 @@ import { useRequest } from "@/hooks/use-request"
 import { useRequestHistory } from "@/hooks/use-request-history"
 import { useRequestMessages } from "@/hooks/use-request-messages"
 import { useRequestMutations } from "@/hooks/use-request-mutations"
+import {
+  useRequestPresence,
+  useReviewPresenceHeartbeat,
+} from "@/hooks/use-request-presence"
 import { useReviewActions } from "@/hooks/use-review-actions"
 import { canOpenRequest, canReview, canSubmitRequest } from "@/lib/auth/capabilities"
 import { ApiClientError } from "@/lib/types/errors"
+import { useRealtimeStore } from "@/stores/realtime-store"
 
 export default function RequestDetailPage() {
   const { requestId } = useParams<{ requestId: string }>()
@@ -30,6 +35,12 @@ export default function RequestDetailPage() {
   const { data: history } = useRequestHistory(id)
   const { approve, reject, requestChanges } = useReviewActions()
   const { submit } = useRequestMutations()
+  const liveReviewer = useRealtimeStore((s) => s.reviewingBy[id])
+
+  // Subscribe for other viewers; broadcast "is reviewing" when this user can review.
+  useRequestPresence(Number.isFinite(id) ? id : undefined)
+  const showReviewActions = !!user && !!request && canReview(user, request)
+  useReviewPresenceHeartbeat(Number.isFinite(id) ? id : undefined, showReviewActions)
 
   const canChat = !!user && !!request && canOpenRequest(user, request)
   const {
@@ -55,10 +66,10 @@ export default function RequestDetailPage() {
     return <LockedBanner reviewerName={request.assignedReviewer?.name} />
   }
 
-  const showReviewActions = canReview(user, request)
   const showSubmit = canSubmitRequest(user, request)
   const deciding =
     approve.isPending || reject.isPending || requestChanges.isPending
+  const reviewingBy = liveReviewer ?? request.reviewingBy
 
   async function handleDecide(
     decision: "APPROVED" | "REJECTED" | "CHANGES_REQUESTED",
@@ -107,8 +118,8 @@ export default function RequestDetailPage() {
       <div className="flex flex-col gap-6">
         <RequestDetailHeader request={request} />
 
-        {request.reviewingBy && request.reviewingBy.id !== user.id && (
-          <ReviewingBanner reviewerName={request.reviewingBy.name} />
+        {reviewingBy && reviewingBy.name !== user.name && (
+          <ReviewingBanner reviewerName={reviewingBy.name} />
         )}
 
         {request.description ? (

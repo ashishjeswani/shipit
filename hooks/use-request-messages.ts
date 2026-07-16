@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { useUsers } from "@/hooks/use-users"
@@ -54,14 +54,18 @@ export function useRequestMessages(
     retry: false,
   })
 
-  // Mark the thread read whenever the list fetch lands (including refetch after
-  // send) so list unreadMessages badges clear (BE §5).
+  // Mark the thread read once per request open so list unreadMessages badges
+  // clear (BE §5 / docs/frontend/08). Do not key off dataUpdatedAt — a refetch
+  // must not re-fire mark-read.
+  const markedReadForId = useRef<number | null>(null)
   useEffect(() => {
-    if (!enabled || !messagesQuery.isSuccess || !messagesQuery.dataUpdatedAt) return
+    if (!enabled || !messagesQuery.isSuccess) return
+    if (markedReadForId.current === id) return
+    markedReadForId.current = id
     void messagesApi.markRead(id).then(() => {
       queryClient.invalidateQueries({ queryKey: keys.requests.list() })
     })
-  }, [enabled, id, messagesQuery.isSuccess, messagesQuery.dataUpdatedAt, queryClient])
+  }, [enabled, id, messagesQuery.isSuccess, queryClient])
 
   const usersById = new Map((usersQuery.data ?? []).map((u) => [u.id, u]))
   const data = (messagesQuery.data ?? [])

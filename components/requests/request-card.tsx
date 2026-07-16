@@ -10,10 +10,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { RequestStatusBadge } from "@/components/requests/request-status-badge"
 import { ReviewActions } from "@/components/requests/review-actions"
 import { useRequestMutations } from "@/hooks/use-request-mutations"
+import { useRequestPresence } from "@/hooks/use-request-presence"
 import { useReviewActions } from "@/hooks/use-review-actions"
 import { ApiClientError } from "@/lib/types/errors"
 import type { DeploymentRequestListItem } from "@/lib/types/api"
 import { cn } from "@/lib/utils"
+import { useRealtimeStore } from "@/stores/realtime-store"
 
 export function RequestCard({
   request,
@@ -31,6 +33,10 @@ export function RequestCard({
   const { approve, reject, requestChanges } = useReviewActions()
   const { submit } = useRequestMutations()
   const [error, setError] = useState<string | null>(null)
+  // Live presence overrides the REST snapshot when a Pusher event arrives.
+  useRequestPresence(request.id)
+  const liveReviewer = useRealtimeStore((s) => s.reviewingBy[request.id])
+  const reviewingBy = liveReviewer ?? request.reviewingBy
 
   const deciding =
     approve.isPending || reject.isPending || requestChanges.isPending
@@ -93,9 +99,9 @@ export function RequestCard({
             Restricted to {request.assignedReviewer?.name}
           </p>
         )}
-        {request.reviewingBy && (
+        {reviewingBy && (
           <p className="text-xs text-muted-foreground">
-            {request.reviewingBy.name} is reviewing
+            {reviewingBy.name} is reviewing
           </p>
         )}
         {hasActions && (

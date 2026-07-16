@@ -46,9 +46,28 @@ export const SCRIPT_LANGUAGE_BY_EXT: Record<
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://hackathon-backend-948a.onrender.com"
 
-// The live backend's realtime layer is STOMP/WebSocket only (BE §8) — it has
-// no Pusher auth endpoint and never publishes to Pusher. These are wired per
-// an explicit, out-of-contract request (lib/realtime/pusher-client.ts); left
-// unset, the notification bell just runs on REST alone with no live push.
-export const PUSHER_KEY = process.env.NEXT_PUBLIC_PUSHER_KEY ?? ""
-export const PUSHER_CLUSTER = process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? "eu"
+// Live notification/presence transport (explicit FE guide, 2026-07-16):
+// Pusher presence + FCM push sit alongside the BE §7 REST notification APIs.
+// Override via NEXT_PUBLIC_* in deploy; defaults are the shared public client keys.
+export const PUSHER_KEY = process.env.NEXT_PUBLIC_PUSHER_KEY ?? "3f5f6accdb30847d9e95"
+export const PUSHER_CLUSTER = process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? "ap2"
+
+export const FIREBASE_VAPID_KEY =
+  process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ??
+  "BDRJPILKGuK8DQroUqgtQcW2FOz5KF2EIs66-nAeEOYeRqgZP5h1HgCexqGTdXdFGmRxDtBSVglhTgSd8UiiVJM"
+
+export const FIREBASE_WEB_CONFIG = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "AIzaSyBvYx54QkWTXVepwlhgha9K0eK5q4Oq83Y",
+  authDomain:
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "e-commerce-a1343.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "e-commerce-a1343",
+  storageBucket:
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "e-commerce-a1343.firebasestorage.app",
+  messagingSenderId:
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "232609413862",
+  appId:
+    process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "1:232609413862:web:5c62bcc2f37a46bbb4d927",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? "G-V0ZLV8W6SS",
+} as const
+
+export const FCM_TOKEN_STORAGE_KEY = "shipit_fcm_token"

@@ -9,7 +9,10 @@ export const keys = {
   },
   release: (id: number) => ["releases", id] as const,
   requests: {
-    list: () => ["requests"] as const,
+    // Must not be a prefix of request/detail/messages keys — TanStack Query
+    // partial-matches on invalidateQueries, so `["requests"]` would refetch
+    // every request query and loop with mark-read.
+    list: () => ["requests", "list"] as const,
   },
   request: (id: number) => ["requests", id] as const,
   requestHistory: (id: number) => ["requests", id, "history"] as const,
