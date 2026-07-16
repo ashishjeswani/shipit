@@ -29,7 +29,9 @@ export function ReleaseAccordionList({
   user: User
 }) {
   return (
-    <Card className="flex h-full flex-col overflow-hidden">
+    // Soft primary wash on the outer shell so release rows read as a different
+    // layer from the white request cards nested inside (approver hierarchy).
+    <Card className="flex h-full flex-col overflow-hidden bg-primary/5 ring-primary/15">
       <CardHeader className="shrink-0">
         <CardTitle className="text-sm font-medium text-muted-foreground">Releases</CardTitle>
       </CardHeader>
@@ -40,10 +42,14 @@ export function ReleaseAccordionList({
           <Accordion
             multiple
             defaultValue={releases.map(({ release }) => release.id)}
-            className="rounded-none border-none"
+            className="rounded-none border-none bg-transparent"
           >
             {releases.map(({ release, requests }) => (
-              <AccordionItem key={release.id} value={release.id}>
+              <AccordionItem
+                key={release.id}
+                value={release.id}
+                className="border-primary/10 data-open:bg-primary/10"
+              >
                 <AccordionTrigger>
                   <div className="flex flex-1 flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">

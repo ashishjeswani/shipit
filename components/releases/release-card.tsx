@@ -17,7 +17,9 @@ export function ReleaseCard({
   user: User
 }) {
   return (
-    <Card>
+    // Soft primary wash so the release shell reads as a different layer from
+    // the white request cards nested inside (approver list hierarchy).
+    <Card className="bg-primary/5 ring-primary/15">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
@@ -36,7 +38,7 @@ export function ReleaseCard({
           </div>
         </div>
       </CardHeader>
-      <Separator />
+      <Separator className="bg-primary/10" />
       <CardContent className="flex flex-col gap-2">
         {requests.length === 0 ? (
           <p className="text-sm text-muted-foreground">No requests in this release yet.</p>

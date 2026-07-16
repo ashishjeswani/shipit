@@ -18,7 +18,14 @@ export function RequestCard({
   canReview: boolean
 }) {
   const body = (
-    <Card size="sm" className={request.locked ? "opacity-60" : "transition-shadow hover:shadow-sm"}>
+    <Card
+      size="sm"
+      className={
+        request.locked
+          ? "bg-card opacity-60"
+          : "bg-card transition-shadow hover:shadow-sm"
+      }
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {request.title}

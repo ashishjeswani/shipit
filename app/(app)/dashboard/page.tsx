@@ -20,7 +20,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       {/* Sticky so the summary cards stay put while only the release list
           below scrolls (its own bounded, scrollable Card). */}
-      <div className="sticky top-0 z-10 flex flex-col gap-6 bg-background pb-2">
+      <div className="sticky top-16 z-10 flex flex-col gap-6 bg-background/90 pb-2 backdrop-blur-sm">
         <h1 className="font-heading text-xl font-medium">Dashboard</h1>
         {(dashboardLoading || releasesLoading) && (
           <p className="text-sm text-muted-foreground">Loading dashboard…</p>
