@@ -2,6 +2,8 @@
 
 Implements BE §8 exactly. This is the highest-weighted requirement in the problem statement — treat this doc as load-bearing, not optional polish.
 
+> **Deviation (explicitly requested, 2026-07-16):** the notification bell's live-push transport is currently `pusher-js` (`lib/realtime/pusher-client.ts`, `hooks/use-notifications-realtime.ts`), not the STOMP personal queue this doc describes below. The BE has no Pusher integration — no auth endpoint, nothing publishes to it — so this is inert until a BE-side bridge exists; the bell still works via REST polling/refetch alone. Everything else in this doc (releases/requests/messages topics, reviewing heartbeat, reconnect/backfill) is unbuilt and still the plan — build it against STOMP as written here, and either migrate the bell onto `topics.personalNotifications()` at that point or keep Pusher as a second transport, whichever the team decides. See [04-api-endpoint-map.md](04-api-endpoint-map.md)'s notifications section for the FE-side detail.
+
 ## Connection lifecycle (`lib/realtime/stomp-client.ts`)
 
 - One singleton `Client` (from `@stomp/stompjs`) for the whole app, created lazily on first authenticated mount, torn down on logout.

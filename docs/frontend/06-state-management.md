@@ -20,7 +20,7 @@ export const keys = {
   requestHistory: (id: number) => ["requests", id, "history"] as const,
   requestMessages: (id: number) => ["requests", id, "messages"] as const,
   notifications: {
-    list: (unreadOnly?: boolean) => ["notifications", { unreadOnly }] as const,
+    list: () => ["notifications"] as const,
     unreadCount: () => ["notifications", "unread-count"] as const,
   },
   users: (role?: Role) => ["users", { role }] as const,

@@ -29,3 +29,10 @@ export const FIELD_LIMITS = {
 // scope here) — see lib/auth/token.ts for the silent bootstrap this backs.
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://hackathon-backend-948a.onrender.com"
+
+// The live backend's realtime layer is STOMP/WebSocket only (BE §8) — it has
+// no Pusher auth endpoint and never publishes to Pusher. These are wired per
+// an explicit, out-of-contract request (lib/realtime/pusher-client.ts); left
+// unset, the notification bell just runs on REST alone with no live push.
+export const PUSHER_KEY = process.env.NEXT_PUBLIC_PUSHER_KEY ?? ""
+export const PUSHER_CLUSTER = process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? "eu"

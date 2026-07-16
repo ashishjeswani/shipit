@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { NotificationBell } from "@/components/layout/notification-bell"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 
@@ -43,6 +44,7 @@ export function AppHeader() {
         </nav>
       </div>
       <div className="flex flex-wrap items-center gap-3">
+        <NotificationBell userId={user.id} />
         <div className="flex flex-wrap items-center gap-1.5 text-sm">
           <span>{user.name}</span>
           {/* One badge per role actually held (BE §0's `roles` is a set, not

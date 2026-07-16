@@ -58,10 +58,12 @@ Every BE endpoint, the `lib/api/*` function that wraps it, the hook that calls i
 
 | Endpoint | `lib/api` fn | Hook | Consumers |
 |---|---|---|---|
-| `GET /api/notifications?unreadOnly=&since=` | `notifications.list(opts)` | `useNotifications()` | `notification-bell.tsx`, backfill in `use-realtime.ts` |
+| `GET /api/notifications?unreadOnly=false&since=` | `notifications.list(since?)` | `useNotifications()` | `notification-bell.tsx` |
 | `GET /api/notifications/unread-count` | `notifications.unreadCount()` | `useNotifications()` | `notification-bell.tsx` badge |
-| `PATCH /api/notifications/{id}/read` | `notifications.markRead(id)` | `useNotifications().markRead` | `notification-item.tsx` |
-| `POST /api/notifications/read-all` | `notifications.markAllRead()` | `useNotifications().markAllRead` | `notification-list.tsx` header action |
+| `PATCH /api/notifications/{id}/read` | `notifications.markRead(id)` | `useNotificationMutations().markRead` | `notification-bell.tsx` item click |
+| `POST /api/notifications/read-all` | `notifications.markAllRead()` | `useNotificationMutations().markAllRead` | `notification-bell.tsx` header action |
+
+**Deviation, explicitly requested:** live push for the bell is wired via `pusher-js` (`lib/realtime/pusher-client.ts`, `use-notifications-realtime.ts`) instead of the STOMP personal queue described in [05](05-realtime.md). The BE has no matching Pusher integration (no `/pusher/auth` endpoint, nothing publishes events to Pusher), so subscription/auth will fail and `new-notification` never fires — the REST calls above are unaffected and the bell is fully functional on polling/refetch alone. Swap this for `topics.personalNotifications()` once STOMP (build-plan phase 7) lands, or add a BE-side Pusher bridge — whichever the team decides.
 
 ## Not called from FE (BE-internal or out of scope)
 

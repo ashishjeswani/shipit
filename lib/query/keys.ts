@@ -12,4 +12,8 @@ export const keys = {
     list: () => ["requests"] as const,
   },
   request: (id: number) => ["requests", id] as const,
+  notifications: {
+    list: () => ["notifications"] as const,
+    unreadCount: () => ["notifications", "unread-count"] as const,
+  },
 }

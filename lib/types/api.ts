@@ -106,3 +106,14 @@ export interface DashboardResponse {
   developer: { myRequests: Record<RequestStatus, number> } | null
   approver: { pendingReviews: number; assignedToMe: number } | null
 }
+
+// Mirrors BE §7 exactly — no FE-side renaming needed, unlike Release/Request.
+export interface Notification {
+  id: number
+  type: string
+  title: string
+  message: string
+  read: boolean
+  payload: Record<string, unknown>
+  createdAt: string
+}
