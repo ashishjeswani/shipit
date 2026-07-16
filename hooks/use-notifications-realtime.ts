@@ -3,16 +3,16 @@
 import { useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
-import { keys } from "@/lib/query/keys"
 import { PUSHER_KEY } from "@/lib/constants"
+import { syncNotificationsFromRest } from "@/lib/notifications/sync"
 import {
   getPusherClient,
   userNotificationChannel,
 } from "@/lib/realtime/pusher-client"
 
 // Mounted once, globally, from NotificationBell — every authenticated screen
-// needs the bell kept fresh. Pusher events are cache-invalidation hints only
-// (REST remains source of truth; see docs/frontend/05-realtime.md).
+// needs the bell kept fresh. Pusher events trigger a REST sync + toast for
+// any rows newer than the watermark (deduped with FCM via lastSeen id).
 export function useNotificationsRealtime(userId: number | undefined) {
   const queryClient = useQueryClient()
 
@@ -25,16 +25,16 @@ export function useNotificationsRealtime(userId: number | undefined) {
     const channelName = userNotificationChannel(userId)
     const channel = pusher.subscribe(channelName)
 
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: keys.notifications.list() })
-      queryClient.invalidateQueries({ queryKey: keys.notifications.unreadCount() })
+    const onNew = () => {
+      void syncNotificationsFromRest({ queryClient, toastNew: true }).catch((error) => {
+        console.error("Failed to sync notifications after Pusher event:", error)
+      })
     }
-    channel.bind("new-notification", invalidate)
+    channel.bind("new-notification", onNew)
 
     return () => {
-      channel.unbind_all()
+      channel.unbind("new-notification", onNew)
       pusher.unsubscribe(channelName)
-      // Do not disconnect the shared client — presence subscriptions may still need it.
     }
   }, [userId, queryClient])
 }

@@ -65,11 +65,11 @@ Live `MessageEntity` returns `senderId` (not an embedded `sender`); `useRequestM
 |---|---|---|---|
 | `GET /api/dashboard` | `dashboard.get()` | `useDashboard()` | `dashboard/page.tsx` |
 
-## Notifications (BE §7 + FCM/Pusher presence guide)
+## Notifications (BE §7 + live realtime-controller)
 
 | Endpoint | `lib/api` fn | Hook | Consumers |
 |---|---|---|---|
-| `GET /api/notifications?unreadOnly=false&since=` | `notifications.list(since?)` | `useNotifications()` | `notification-bell.tsx` |
+| `GET /api/notifications/my` | `notifications.list()` | `useNotifications()` / sync helper | `notification-bell.tsx`, in-app toasts |
 | `GET /api/notifications/unread-count` | `notifications.unreadCount()` | `useNotifications()` | `notification-bell.tsx` badge |
 | `PATCH /api/notifications/{id}/read` | `notifications.markRead(id)` | `useNotificationMutations().markRead` | `notification-bell.tsx` item click |
 | `POST /api/notifications/read-all` | `notifications.markAllRead()` | `useNotificationMutations().markAllRead` | `notification-bell.tsx` header action |
@@ -78,12 +78,17 @@ Live `MessageEntity` returns `senderId` (not an embedded `sender`); `useRequestM
 | `POST /api/notifications/presence/reviewing?requestId=&isReviewing=` | `notifications.setReviewingPresence(id, bool)` | `useReviewPresenceHeartbeat` | request detail (eligible approver) |
 | `POST /api/notifications/pusher/auth` | called by `pusher-js` (not wrapped) | `getPusherClient()` | private + presence channel subscribe |
 
-**Live push transports (explicitly requested):**
-- **FCM** — `lib/firebase/config.ts` + `public/firebase-messaging-sw.js` + `hooks/use-fcm-notifications.ts`. Foreground `onMessage` invalidates notification Query keys (REST remains source of truth); background uses the service worker.
-- **Pusher** — singleton `lib/realtime/pusher-client.ts`. Bell: `private-user-{userId}` / `new-notification`. Presence: `presence-request-{requestId}` / `review-status-changed` → `realtime-store.reviewingBy` (the one sanctioned ephemeral write; see [05](05-realtime.md), [06](06-state-management.md)).
+**Live DTO drift:** `NotificationReadDto` is `{ id, type, read, payload: string, eventId, createdAt }` (no `title`/`message`). `lib/api/enrich-notification.ts` derives title from `type` and message from `payload`. `unread-count` may be a bare `number` or `{ count }` — the wrapper normalizes to `{ count }`.
+
+**In-app toasts (`sonner`):** foreground FCM → toast immediately; Pusher `new-notification` / 20s poll / window focus → `GET /api/notifications/my` and toast rows newer than `realtime-store.lastSeenNotificationId`. FCM briefly suppresses REST toasts to avoid duplicates.
+
+**Live push transports:**
+- **FCM** — `lib/firebase/config.ts` + `public/firebase-messaging-sw.js` + `hooks/use-fcm-notifications.ts`
+- **Pusher** — singleton `lib/realtime/pusher-client.ts` for bell + presence
 
 ## Not called from FE (BE-internal or out of scope)
 
 - `GET /api/health`, `POST /api/dev/reset` — ops-only, not surfaced in the UI.
-- BE §10 containerized execution / in-browser file versions — still out of scope. FCM device push is **in scope** via the `/api/notifications/device-tokens` endpoints above (not the older §10a `/api/devices/*` paths).
-- STOMP/SockJS personal queue (`/user/queue/notifications`) — deferred; Pusher + FCM cover live delivery for this pass.
+- Generic paginated `GET /api/notifications` (CRUD) — inbox uses `/my` instead.
+- BE §10 containerized execution / in-browser file versions — still out of scope.
+- STOMP/SockJS personal queue — deferred; Pusher + FCM + REST poll cover live delivery for this pass.

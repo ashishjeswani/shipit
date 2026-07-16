@@ -141,7 +141,8 @@ export interface DashboardResponse {
   approver: { pendingReviews: number; assignedToMe: number } | null
 }
 
-// Mirrors BE §7 exactly — no FE-side renaming needed, unlike Release/Request.
+// Live NotificationReadDto has type/payload/read — title/message are derived
+// in lib/api/enrich-notification.ts for the bell + toasts.
 export interface Notification {
   id: number
   type: string
@@ -150,4 +151,5 @@ export interface Notification {
   read: boolean
   payload: Record<string, unknown>
   createdAt: string
+  eventId?: number
 }
