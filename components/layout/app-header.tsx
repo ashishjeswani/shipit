@@ -28,6 +28,7 @@ export function AppHeader() {
     <header className="flex flex-col gap-3 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
       <div className="flex flex-wrap items-center gap-4">
         <span className="font-heading text-base font-medium">ShipIt</span>
+        <div className="hidden h-5 w-px bg-muted-foreground/40 sm:block" aria-hidden="true" />
         <nav className="flex items-center gap-4">
           {NAV_LINKS.map((link) => (
             <Link

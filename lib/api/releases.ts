@@ -11,7 +11,11 @@ function fromDto(dto: ReleaseDto): Release {
     id: dto.id,
     name: dto.name,
     description: dto.description,
-    status: dto.releaseStatus,
+    // Accept either field name (see ReleaseDto note). Fall back to OPEN — the
+    // BE's own documented default for a status-less release (BACKEND_API_GUIDE
+    // §create) — so a malformed payload degrades to a safe value instead of
+    // undefined crashing every status consumer downstream.
+    status: dto.releaseStatus ?? dto.status ?? "OPEN",
     requestCount: dto.requestCount,
     createdAt: dto.createdAt,
   }

@@ -17,7 +17,12 @@ export interface ReleaseDto {
   id: number
   name: string
   description: string | null
-  releaseStatus: ReleaseStatus
+  // Field-name drift: docs/BACKEND_API_GUIDE.md §GET /api/releases documents
+  // this as `status`, while the request DTO serializes as `requestStatus`
+  // (Spring enum naming). The live release payload has been seen sending
+  // neither reliably, so accept both and let fromDto coalesce.
+  releaseStatus?: ReleaseStatus
+  status?: ReleaseStatus
   requestCount: number
   createdAt: string
 }

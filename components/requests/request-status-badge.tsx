@@ -10,5 +10,5 @@ const STATUS_VARIANT: Record<RequestStatus, "secondary" | "default" | "destructi
 }
 
 export function RequestStatusBadge({ status }: { status: RequestStatus }) {
-  return <Badge variant={STATUS_VARIANT[status]}>{status.replaceAll("_", " ")}</Badge>
+  return <Badge variant={STATUS_VARIANT[status]}>{status?.replaceAll("_", " ")}</Badge>
 }

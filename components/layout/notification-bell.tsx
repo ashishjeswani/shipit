@@ -59,10 +59,10 @@ export function NotificationBell({ userId }: { userId: number }) {
         <Separator />
         <div className="max-h-96 overflow-y-auto">
           {isLoading && <p className="p-4 text-sm text-muted-foreground">Loading…</p>}
-          {!isLoading && data.length === 0 && (
+          {!isLoading && data?.length === 0 && (
             <p className="p-4 text-sm text-muted-foreground">No notifications</p>
           )}
-          {data.map((notification) => (
+          {data?.map((notification) => (
             <button
               key={notification.id}
               type="button"

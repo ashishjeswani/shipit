@@ -7,6 +7,9 @@ const STATUS_VARIANT: Record<ReleaseStatus, "secondary" | "default" | "outline">
   CLOSED: "outline",
 }
 
-export function ReleaseStatusBadge({ status }: { status: ReleaseStatus }) {
-  return <Badge variant={STATUS_VARIANT[status]}>{status.replaceAll("_", " ")}</Badge>
+export function ReleaseStatusBadge({ status }: { status?: ReleaseStatus }) {
+  // A missing/unknown status must never crash the tree that renders this leaf
+  // (a null status once took down the whole dashboard via `.replaceAll`).
+  const label = status?.replaceAll("_", " ") ?? "Unknown"
+  return <Badge variant={(status && STATUS_VARIANT[status]) ?? "outline"}>{label}</Badge>
 }

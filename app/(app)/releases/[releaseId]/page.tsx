@@ -5,11 +5,12 @@ import { useParams } from "next/navigation"
 
 import { RequestCard } from "@/components/requests/request-card"
 import { ReleaseStatusBadge } from "@/components/releases/release-status-badge"
+import { ReleaseStatusMenu } from "@/components/releases/release-status-menu"
 import { buttonVariants } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { useRelease } from "@/hooks/use-release"
 import { useRequests } from "@/hooks/use-requests"
-import { canCreateRequest, canReview } from "@/lib/auth/capabilities"
+import { canCreateRequest, canReview, hasRole } from "@/lib/auth/capabilities"
 
 export default function ReleaseDetailPage() {
   const { releaseId } = useParams<{ releaseId: string }>()
@@ -41,11 +42,18 @@ export default function ReleaseDetailPage() {
             <p className="text-sm text-muted-foreground">{release.description}</p>
           )}
         </div>
-        {canCreateRequest(user, release) && (
-          <Link href={`/releases/${id}/requests/new`} className={buttonVariants({ size: "sm" })}>
-            New request
-          </Link>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Doc gate is "approvers on this release" (release.approvers ∋ user),
+              but the live BE's ReleaseDto omits `approvers` (lib/types/api.ts),
+              so degrade to the role check — same compromise canCreateRelease
+              makes. Tightens to per-release once the BE returns approvers. */}
+          {hasRole(user, "APPROVER") && <ReleaseStatusMenu release={release} />}
+          {canCreateRequest(user, release) && (
+            <Link href={`/releases/${id}/requests/new`} className={buttonVariants({ size: "sm" })}>
+              New request
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
