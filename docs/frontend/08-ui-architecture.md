@@ -72,7 +72,7 @@ The busiest screen — the whole review workflow lives here.
 
 ## Shared layout (`(app)/layout.tsx`)
 
-- `app-header.tsx`: logo/title, `role-tabs.tsx` (only meaningful if you want a quick dashboard/releases nav, not a role switcher — a dual-role user isn't "switching roles," they always see both), `notification-bell.tsx`, connection-status dot ([05](05-realtime.md)), user menu (name, logout).
+- `app-header.tsx`: logo/title, `role-tabs.tsx` (only meaningful if you want a quick dashboard/releases nav, not a role switcher — a dual-role user isn't "switching roles," they always see both), `theme-toggle.tsx` (light/dark; also toggled by the `d` hotkey via `ThemeProvider`), `notification-bell.tsx`, connection-status dot ([05](05-realtime.md)), user menu (name, logout).
 - Mounts the realtime provider (STOMP connect + personal-queue subscription) once `auth-store.status === "authenticated"`.
 
 ## Empty/loading/error conventions

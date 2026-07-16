@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/layout/notification-bell"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 
@@ -45,6 +46,7 @@ export function AppHeader() {
         </nav>
       </div>
       <div className="flex flex-wrap items-center gap-3">
+        <ThemeToggle />
         <NotificationBell userId={user.id} />
         <div className="flex flex-wrap items-center gap-1.5 text-sm">
           <span>{user.name}</span>

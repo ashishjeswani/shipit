@@ -31,6 +31,7 @@ shipit/
 │   ├── layout/
 │   │   ├── app-header.tsx
 │   │   ├── role-tabs.tsx               # dashboard tab switcher for dual-role users
+│   │   ├── theme-toggle.tsx            # light/dark toggle (next-themes)
 │   │   └── notification-bell.tsx
 │   ├── releases/
 │   │   ├── release-card.tsx
