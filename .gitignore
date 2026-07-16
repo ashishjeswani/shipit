@@ -34,3 +34,13 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE / editor
+.idea/
+.vscode/
+
+# claude code local settings
+.claude/settings.json
+
+# stray lockfile (this repo uses pnpm-lock.yaml)
+package-lock.json
