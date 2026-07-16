@@ -46,4 +46,27 @@ export const requestsApi = {
   async remove(id: number): Promise<void> {
     await apiClient.delete<void>(`/api/deployment-requests/${id}`)
   },
+
+  // Lifecycle endpoints live under `/api/requests/{id}/…` (not the generic
+  // CRUD `/api/deployment-requests` path) — confirmed on live swagger
+  // "Deployment Request Lifecycle" tag, 2026-07-16.
+  async approve(id: number, comment?: string): Promise<DeploymentRequestDto> {
+    return apiClient.post<DeploymentRequestDto>(
+      `/api/requests/${id}/approve`,
+      comment ? { comment } : {},
+    )
+  },
+
+  async reject(id: number, comment?: string): Promise<DeploymentRequestDto> {
+    return apiClient.post<DeploymentRequestDto>(
+      `/api/requests/${id}/reject`,
+      comment ? { comment } : {},
+    )
+  },
+
+  async requestChanges(id: number, comment: string): Promise<DeploymentRequestDto> {
+    return apiClient.post<DeploymentRequestDto>(`/api/requests/${id}/request-changes`, {
+      comment,
+    })
+  },
 }

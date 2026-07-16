@@ -15,32 +15,25 @@ import { useAuth } from "@/hooks/use-auth"
 import { useRequest } from "@/hooks/use-request"
 import { useRequestHistory } from "@/hooks/use-request-history"
 import { useRequestMessages } from "@/hooks/use-request-messages"
+import { useReviewActions } from "@/hooks/use-review-actions"
 import { canReview } from "@/lib/auth/capabilities"
-import type { RequestStatus } from "@/lib/constants"
-import type { ConversationMessage, HistoryEntry } from "@/lib/types/api"
-
-const DECISION_COPY: Record<string, string> = {
-  APPROVED: "approved this request.",
-  REJECTED: "rejected this request.",
-  CHANGES_REQUESTED: "requested changes on this request.",
-}
+import { ApiClientError } from "@/lib/types/errors"
+import type { ConversationMessage } from "@/lib/types/api"
 
 export default function RequestDetailPage() {
   const { requestId } = useParams<{ requestId: string }>()
   const id = Number(requestId)
 
   const { user } = useAuth()
-  const { data: fetchedRequest, isLoading } = useRequest(id)
-  const { data: baseHistory } = useRequestHistory(id)
+  const { data: request, isLoading } = useRequest(id)
+  const { data: history } = useRequestHistory(id)
   const { data: baseMessages } = useRequestMessages(id)
+  const { approve, reject, requestChanges } = useReviewActions()
 
-  // Mock stage only: there's no backend to persist a decision or a sent
-  // message, so this page holds the interaction locally. Once
-  // requests.approve/reject/requestChanges and messages.create ([04](../../../docs/frontend/04-api-endpoint-map.md))
-  // exist, these become mutations that invalidate the query cache instead.
-  const [statusOverride, setStatusOverride] = useState<RequestStatus | null>(null)
-  const [extraHistory, setExtraHistory] = useState<HistoryEntry[]>([])
+  // Messages still mock-send until messages.create is wired; keep local
+  // extras only for the composer path.
   const [extraMessages, setExtraMessages] = useState<ConversationMessage[]>([])
+  const [decisionError, setDecisionError] = useState<string | null>(null)
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading request…</p>
@@ -48,12 +41,10 @@ export default function RequestDetailPage() {
 
   if (!user) return null
 
-  if (!fetchedRequest) {
+  if (!request) {
     return <p className="text-sm text-muted-foreground">Request not found.</p>
   }
 
-  const request = statusOverride ? { ...fetchedRequest, status: statusOverride } : fetchedRequest
-  const history = [...baseHistory, ...extraHistory]
   const messages = [...baseMessages, ...extraMessages]
 
   if (request.locked) {
@@ -61,39 +52,27 @@ export default function RequestDetailPage() {
   }
 
   const showReviewActions = canReview(user, request)
-  // `user` is narrowed to non-null above, but that narrowing doesn't carry
-  // into the nested function declarations below — capture it once here.
   const currentUser = user
+  const deciding =
+    approve.isPending || reject.isPending || requestChanges.isPending
 
-  function handleDecide(decision: "APPROVED" | "REJECTED" | "CHANGES_REQUESTED", comment: string) {
-    setStatusOverride(decision)
-    setExtraHistory((prev) => [
-      ...prev,
-      { at: new Date().toISOString(), by: currentUser, event: decision },
-    ])
-    setExtraMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        requestId: id,
-        sender: null,
-        text: `${currentUser.name} ${DECISION_COPY[decision]}`,
-        system: true,
-        createdAt: new Date().toISOString(),
-      },
-      ...(comment
-        ? [
-            {
-              id: Date.now() + 1,
-              requestId: id,
-              sender: currentUser,
-              text: comment,
-              system: false,
-              createdAt: new Date().toISOString(),
-            },
-          ]
-        : []),
-    ])
+  async function handleDecide(
+    decision: "APPROVED" | "REJECTED" | "CHANGES_REQUESTED",
+    comment: string,
+  ) {
+    setDecisionError(null)
+    try {
+      if (decision === "APPROVED") {
+        await approve.mutateAsync({ id, comment: comment || undefined })
+      } else if (decision === "REJECTED") {
+        await reject.mutateAsync({ id, comment: comment || undefined })
+      } else {
+        await requestChanges.mutateAsync({ id, comment })
+      }
+    } catch (err) {
+      setDecisionError(decisionErrorMessage(err))
+      throw err
+    }
   }
 
   function handleSend(text: string) {
@@ -131,7 +110,12 @@ export default function RequestDetailPage() {
 
         {request.file && <FileDownloadButton file={request.file} />}
 
-        {showReviewActions && <ReviewActions onDecide={handleDecide} />}
+        {showReviewActions && (
+          <div className="flex flex-col gap-2">
+            <ReviewActions onDecide={handleDecide} pending={deciding} />
+            {decisionError && <p className="text-sm text-destructive">{decisionError}</p>}
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
           <h2 className="font-heading text-sm font-medium text-muted-foreground">History</h2>
@@ -148,4 +132,18 @@ export default function RequestDetailPage() {
       </div>
     </div>
   )
+}
+
+function decisionErrorMessage(err: unknown): string {
+  if (!(err instanceof ApiClientError)) return "Could not record that decision."
+  switch (err.error.code) {
+    case "REQUEST_ALREADY_DECIDED":
+      return "Someone else just decided on this request."
+    case "REQUEST_NOT_REVIEWABLE":
+      return "This request's status changed — refresh and try again."
+    case "NOT_RELEASE_APPROVER":
+      return "You don't have permission for this."
+    default:
+      return err.error.message || "Could not record that decision."
+  }
 }

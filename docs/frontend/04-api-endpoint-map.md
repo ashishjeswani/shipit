@@ -36,9 +36,9 @@ Every BE endpoint, the `lib/api/*` function that wraps it, the hook that calls i
 | `GET /api/requests/{id}/history` | `requests.history(id)` | `useRequestHistory(id)` | `history-timeline.tsx` |
 | `POST /api/requests/{id}/review/start` | `requests.startReview(id)` | `useReviewActions(id).start`, polled by `useReviewHeartbeat(id)` | request detail on mount (approver, allowed to open) |
 | `POST /api/requests/{id}/review/stop` | `requests.stopReview(id)` | `useReviewActions(id).stop` | request detail unmount / after decision |
-| `POST /api/requests/{id}/approve` | `requests.approve(id, comment?)` | `useReviewActions(id).approve` | `review-actions.tsx` |
-| `POST /api/requests/{id}/reject` | `requests.reject(id, comment?)` | `useReviewActions(id).reject` | `review-actions.tsx` |
-| `POST /api/requests/{id}/request-changes` | `requests.requestChanges(id, comment)` | `useReviewActions(id).requestChanges` | `review-actions.tsx` |
+| `POST /api/requests/{id}/approve` | `requests.approve(id, comment?)` | `useReviewActions().approve` | `review-actions.tsx`, `request-card.tsx` (in-list Approve) |
+| `POST /api/requests/{id}/reject` | `requests.reject(id, comment?)` | `useReviewActions().reject` | `review-actions.tsx` |
+| `POST /api/requests/{id}/request-changes` | `requests.requestChanges(id, comment)` | `useReviewActions().requestChanges` | `review-actions.tsx` |
 
 ## Conversation (BE §5)
 

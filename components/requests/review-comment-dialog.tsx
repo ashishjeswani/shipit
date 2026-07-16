@@ -30,18 +30,26 @@ export function ReviewCommentDialog({
   confirmLabel: string
   // Comment is optional for approve/reject, required for request-changes (BE §4).
   commentRequired?: boolean
-  onConfirm: (comment: string) => void
+  onConfirm: (comment: string) => void | Promise<void>
 }) {
   const [comment, setComment] = useState("")
+  const [pending, setPending] = useState(false)
 
   function handleOpenChange(next: boolean) {
+    if (pending) return
     onOpenChange(next)
     if (!next) setComment("")
   }
 
-  function handleConfirm() {
-    onConfirm(comment.trim())
-    handleOpenChange(false)
+  async function handleConfirm() {
+    setPending(true)
+    try {
+      await onConfirm(comment.trim())
+      setComment("")
+      onOpenChange(false)
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
@@ -59,10 +67,16 @@ export function ReviewCommentDialog({
           }
           rows={3}
           autoFocus
+          disabled={pending}
         />
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-          <Button onClick={handleConfirm} disabled={commentRequired && comment.trim().length === 0}>
+          <DialogClose render={<Button variant="outline" disabled={pending} />}>
+            Cancel
+          </DialogClose>
+          <Button
+            onClick={handleConfirm}
+            disabled={pending || (commentRequired && comment.trim().length === 0)}
+          >
             {confirmLabel}
           </Button>
         </DialogFooter>

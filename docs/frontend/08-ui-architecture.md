@@ -44,6 +44,7 @@ No nested request routes under a release (`/releases/[id]/requests/[reqId]`) —
   - `reviewingBy` (from `realtime-store`, falling back to the field on the list response) → small "{name} is reviewing" label, doesn't disable anything (BE §8: does not lock).
   - `unreadMessages > 0` → badge.
   - `mine: true` (dual-role viewing own request in an approver-flavored list) → no review affordances rendered at all.
+  - `canReview` → in-place **Approve** button (comment dialog → `POST /api/requests/{id}/approve`) plus an "Open details" link; the card is not a full-surface link in this state so the button isn't nested in an `<a>`.
 - **Realtime:** subscribes `topics.releaseRequests(releaseId)` while mounted — `REQUEST_SUBMITTED`, `REQUEST_REVIEW_STARTED/STOPPED` update the list in place.
 
 ### `/releases/[releaseId]/requests/new`

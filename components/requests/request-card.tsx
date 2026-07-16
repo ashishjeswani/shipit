@@ -1,10 +1,16 @@
+"use client"
+
 import Link from "next/link"
+import { useState } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { RequestStatusBadge } from "@/components/requests/request-status-badge"
+import { ReviewCommentDialog } from "@/components/requests/review-comment-dialog"
+import { useReviewActions } from "@/hooks/use-review-actions"
+import { ApiClientError } from "@/lib/types/errors"
 import type { DeploymentRequestListItem } from "@/lib/types/api"
 
 export function RequestCard({
@@ -17,6 +23,23 @@ export function RequestCard({
   // never show "review your own request" as a greyed-out temptation.
   canReview: boolean
 }) {
+  const { approve } = useReviewActions()
+  const [approveOpen, setApproveOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleApprove(comment: string) {
+    setError(null)
+    try {
+      await approve.mutateAsync({
+        id: request.id,
+        comment: comment || undefined,
+      })
+    } catch (err) {
+      setError(decisionErrorMessage(err))
+      throw err
+    }
+  }
+
   const body = (
     <Card
       size="sm"
@@ -50,10 +73,30 @@ export function RequestCard({
           </p>
         )}
         {canReview && (
-          <Button size="sm" className="mt-1 w-fit" nativeButton={false} render={<span />}>
-            Review
-          </Button>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              disabled={approve.isPending}
+              onClick={(event) => {
+                // Card may sit inside a Link — keep Approve from navigating.
+                event.preventDefault()
+                event.stopPropagation()
+                setError(null)
+                setApproveOpen(true)
+              }}
+            >
+              Approve
+            </Button>
+            <Link
+              href={`/requests/${request.id}`}
+              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+              onClick={(event) => event.stopPropagation()}
+            >
+              Open details
+            </Link>
+          </div>
         )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </CardContent>
     </Card>
   )
@@ -61,18 +104,48 @@ export function RequestCard({
   // `locked` requests aren't clickable from the card — defense-in-depth only,
   // the detail page still enforces via `locked-banner.tsx` on direct navigation
   // (docs/frontend/08-ui-architecture.md).
-  if (request.locked) {
-    return (
-      <Tooltip>
-        <TooltipTrigger render={<div />}>{body}</TooltipTrigger>
-        <TooltipContent>Restricted to {request.assignedReviewer?.name}</TooltipContent>
-      </Tooltip>
-    )
-  }
-
-  return (
+  const card = request.locked ? (
+    <Tooltip>
+      <TooltipTrigger render={<div />}>{body}</TooltipTrigger>
+      <TooltipContent>Restricted to {request.assignedReviewer?.name}</TooltipContent>
+    </Tooltip>
+  ) : canReview ? (
+    // Approvers get an in-place Approve control; the card itself is not a
+    // full-surface link so the button isn't nested in an <a>.
+    body
+  ) : (
     <Link href={`/requests/${request.id}`} className="block">
       {body}
     </Link>
   )
+
+  return (
+    <>
+      {card}
+      {canReview && (
+        <ReviewCommentDialog
+          open={approveOpen}
+          onOpenChange={setApproveOpen}
+          title="Approve this request?"
+          description="The developer will be notified. You can add an optional comment."
+          confirmLabel={approve.isPending ? "Approving…" : "Approve"}
+          onConfirm={handleApprove}
+        />
+      )}
+    </>
+  )
+}
+
+function decisionErrorMessage(err: unknown): string {
+  if (!(err instanceof ApiClientError)) return "Could not approve this request."
+  switch (err.error.code) {
+    case "REQUEST_ALREADY_DECIDED":
+      return "Someone else just decided on this request."
+    case "REQUEST_NOT_REVIEWABLE":
+      return "This request's status changed — refresh and try again."
+    case "NOT_RELEASE_APPROVER":
+      return "You don't have permission for this."
+    default:
+      return err.error.message || "Could not approve this request."
+  }
 }
