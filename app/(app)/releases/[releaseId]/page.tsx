@@ -43,10 +43,8 @@ export default function ReleaseDetailPage() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Doc gate is "approvers on this release" (release.approvers ∋ user),
-              but the live BE's ReleaseDto omits `approvers` (lib/types/api.ts),
-              so degrade to the role check — same compromise canCreateRelease
-              makes. Tightens to per-release once the BE returns approvers. */}
+          {/* Gate is "approvers on this release" when the list is present;
+              fall back to the role check if the payload omits approvers. */}
           {hasRole(user, "APPROVER") && <ReleaseStatusMenu release={release} />}
           {canCreateRequest(user, release) && (
             <Link href={`/releases/${id}/requests/new`} className={buttonVariants({ size: "sm" })}>

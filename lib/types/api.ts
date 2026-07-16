@@ -17,39 +17,53 @@ export interface ReleaseDto {
   id: number
   name: string
   description: string | null
-  // Field-name drift: docs/BACKEND_API_GUIDE.md §GET /api/releases documents
-  // this as `status`, while the request DTO serializes as `requestStatus`
-  // (Spring enum naming). The live release payload has been seen sending
-  // neither reliably, so accept both and let fromDto coalesce.
+  // Field-name drift: older payloads used `releaseStatus`; live swagger
+  // (ReleaseReadDto) serializes `status`. Accept both and let fromDto coalesce.
   releaseStatus?: ReleaseStatus
   status?: ReleaseStatus
+  createdBy?: UserSummary | null
+  approvers?: UserSummary[]
   requestCount: number
+  myRequestCount?: number | null
   createdAt: string
 }
 
+// Mirrors live DeploymentRequestReadDto (/v3/api-docs). Older smoke-tested
+// payloads used bare ownerId/assignedReviewerId + requestStatus — keep those
+// optional so enrich-request can still resolve either shape.
 export interface DeploymentRequestDto {
   id: number
   releaseId: number
   title: string
-  requestStatus: RequestStatus
-  ownerId: number
-  assignedReviewerId: number | null
+  description?: string
+  status?: RequestStatus
+  requestStatus?: RequestStatus
+  owner?: UserSummary | null
+  assignedReviewer?: UserSummary | null
+  ownerId?: number
+  assignedReviewerId?: number | null
+  file?: RequestFile | null
+  reviewingBy?: UserSummary | null
+  locked?: boolean
+  unreadMessages?: number
   createdAt: string
+  updatedAt?: string
 }
 
 // ---- FE-facing shapes consumed by hooks/components ----
 
 // A 1:1 mirror of ReleaseDto with `releaseStatus` renamed to `status` for
-// readability. The live backend doesn't return `createdBy`/`approvers`/
-// `myRequestCount` (docs/BACKEND_API_GUIDE.md describes them, the deployed
-// API doesn't produce them yet) — `myRequestCount` is instead computed
-// client-side in use-releases.ts from the joined request list.
+// readability. `myRequestCount` is preferred from the BE when present;
+// otherwise use-releases.ts fills it client-side from the joined request list.
 export interface Release {
   id: number
   name: string
   description: string | null
   status: ReleaseStatus
+  createdBy?: UserSummary | null
+  approvers?: UserSummary[]
   requestCount: number
+  myRequestCount?: number
   createdAt: string
 }
 
@@ -59,14 +73,11 @@ export interface RequestFile {
   language: "python" | "javascript" | "shell"
 }
 
-// Enriched, viewer-scoped projection of DeploymentRequestDto: ownerId/
-// assignedReviewerId are resolved to UserSummary via the users list (the BE
-// never embeds names), and locked/mine are computed client-side from the
-// current pretend-auth user (lib/auth/capabilities.ts) since there's no real
-// per-user session backing this pass. The BE's list and detail endpoints
-// return the identical shape today (no detail-only fields), so one type
-// covers both — kept as two names for prop-type compatibility with existing
-// components.
+// Enriched, viewer-scoped projection of DeploymentRequestDto: embedded
+// owner/assignedReviewer (or bare ids on older payloads) are normalized to
+// UserSummary, and locked/mine are filled from the BE when present or
+// computed client-side (lib/auth/capabilities.ts). List and detail share one
+// enrich path — detail-only fields stay optional on the detail type.
 export interface DeploymentRequestListItem {
   id: number
   releaseId: number
@@ -75,15 +86,14 @@ export interface DeploymentRequestListItem {
   owner: UserSummary
   assignedReviewer: UserSummary | null
   locked: boolean
-  reviewingBy: UserSummary | null // always null — no presence signal exists yet
+  reviewingBy: UserSummary | null
   unreadMessages?: number
   mine?: boolean
   createdAt: string
 }
 
-// description/file/updatedAt aren't returned by the live backend yet
-// (DeploymentRequestReadDto has neither field) — optional so the detail page
-// renders "not available" instead of crashing on missing data.
+// description/file/updatedAt are present on live DeploymentRequestReadDto;
+// optional so older payloads still render without crashing.
 export interface DeploymentRequestDetail extends DeploymentRequestListItem {
   release?: { id: number; name: string; status: ReleaseStatus }
   description?: string

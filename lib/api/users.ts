@@ -13,11 +13,11 @@ interface Page<T> {
 }
 
 // The live GET /api/users has no `role` filter (docs/BACKEND_API_GUIDE.md
-// describes one, the deployed API ignores it) — fetched in bulk and used
-// only to resolve a request's ownerId/assignedReviewerId to a display name.
+// describes one, the deployed API ignores it) — fetched in bulk for approver
+// pickers and as a fallback when a request payload only has bare user ids.
 // Role-based UI gating never reads these BE role strings (they use a
 // different scheme — ROLE_DEV/ROLE_REVIEWER — than the app's Role type); it's
-// driven entirely by the local pretend-auth user, see lib/auth/capabilities.ts.
+// driven by the session user's roles via lib/auth/capabilities.ts.
 export const usersApi = {
   async list(): Promise<UserSummary[]> {
     const page = await apiClient.get<Page<UserDto>>("/api/users?page=0&size=200")

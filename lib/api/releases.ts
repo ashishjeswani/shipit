@@ -16,7 +16,10 @@ function fromDto(dto: ReleaseDto): Release {
     // §create) — so a malformed payload degrades to a safe value instead of
     // undefined crashing every status consumer downstream.
     status: dto.releaseStatus ?? dto.status ?? "OPEN",
+    createdBy: dto.createdBy ?? null,
+    approvers: dto.approvers ?? [],
     requestCount: dto.requestCount,
+    myRequestCount: dto.myRequestCount ?? undefined,
     createdAt: dto.createdAt,
   }
 }

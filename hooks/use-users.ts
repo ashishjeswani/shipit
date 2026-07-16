@@ -5,8 +5,9 @@ import { useQuery } from "@tanstack/react-query"
 import { usersApi } from "@/lib/api/users"
 import { keys } from "@/lib/query/keys"
 
-// Backs ownerId/assignedReviewerId -> display-name resolution for deployment
-// requests (BE never embeds user objects, see lib/api/enrich-request.ts).
+// Backs display-name resolution for deployment requests when an older payload
+// only sends bare ids, and powers approver pickers on create forms. The live
+// BE now embeds UserSummary on requests (see lib/api/enrich-request.ts).
 export function useUsers() {
   return useQuery({
     queryKey: keys.users(),
