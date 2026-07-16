@@ -1,8 +1,9 @@
 /* eslint-disable no-undef */
 // Background/closed-tab FCM handler. Must live at /firebase-messaging-sw.js
 // so the Firebase SDK can find it. Config must match FIREBASE_WEB_CONFIG.
-importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js")
-importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js")
+// Compat CDN version tracks the installed `firebase` package (12.16.0).
+importScripts("https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js")
+importScripts("https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js")
 
 firebase.initializeApp({
   apiKey: "AIzaSyBvYx54QkWTXVepwlhgha9K0eK5q4Oq83Y",
@@ -21,7 +22,6 @@ messaging.onBackgroundMessage((payload) => {
     payload.notification?.title || payload.data?.type || "ShipIt Notification"
   const notificationOptions = {
     body: payload.notification?.body || payload.data?.payload || "You have a new update.",
-    icon: "/logo.png",
     data: payload.data,
   }
 

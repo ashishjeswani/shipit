@@ -41,7 +41,11 @@ export function middleware(request: NextRequest) {
   return NextResponse.next()
 }
 
-export const config = { matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"] }
+// Also exclude firebase-messaging-sw.js — auth redirects break FCM SW install
+// (messaging/failed-service-worker-registration / 10s timeout).
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|firebase-messaging-sw\\.js).*)"],
+}
 ```
 
 ## Capability guards (`lib/auth/capabilities.ts`)

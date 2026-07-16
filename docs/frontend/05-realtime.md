@@ -46,6 +46,8 @@ sequenceDiagram
 
 - Public config + VAPID only on the client (`lib/constants.ts` / `.env.example`). Never ship `serviceAccountKey.json`.
 - Service worker must stay at `public/firebase-messaging-sw.js` (exact path Firebase expects).
+- `proxy.ts` must **not** auth-gate that path — a 307 → `/login` leaves the worker stuck installing and surfaces as `messaging/failed-service-worker-registration` ("Service worker not registered after 10000 ms").
+- `registerFcmDeviceToken` registers the SW itself and passes `serviceWorkerRegistration` into `getToken` (scope `/firebase-cloud-messaging-push-scope`).
 - Foreground handlers must **not** invent notification rows with client-side ids — invalidate and let `GET /api/notifications` refetch.
 
 ---

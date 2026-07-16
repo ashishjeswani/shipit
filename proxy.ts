@@ -20,4 +20,12 @@ export function proxy(request: NextRequest) {
   return NextResponse.next()
 }
 
-export const config = { matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"] }
+// firebase-messaging-sw.js must be reachable without a session cookie —
+// Firebase registers it under /firebase-cloud-messaging-push-scope, and a
+// 307 → /login leaves the worker stuck installing until the 10s timeout
+// (messaging/failed-service-worker-registration).
+export const config = {
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|firebase-messaging-sw\\.js).*)",
+  ],
+}
